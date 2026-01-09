@@ -14,6 +14,7 @@ An **AI-powered Git assistant** that automates commits, branch creation, and wor
 - [Visual Studio Code](https://code.visualstudio.com/) (v1.XX or later)
 - [Git](https://git-scm.com/) installed and configured
 - [pnpm](https://pnpm.io/) (preferred package manager)
+- [apiKey] You will need a Gemini or Huggingface API key to perform tests
 
 > If you don’t have `pnpm` installed, please follow the official installation guide: [https://pnpm.io/installation](https://pnpm.io/installation)
 

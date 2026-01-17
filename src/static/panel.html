@@ -1,252 +1,147 @@
 <!DOCTYPE html>
 <html lang="es">
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>NeuroGit</title>
-        <link rel="stylesheet" href="{{pathCSS}}" />
-    </head>
-    <body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NeuroGit</title>
+    <link rel="stylesheet" href="{{pathCSS}}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- HEADER -->
         <header class="header">
-            <div class="branch-info">
-                <span>Rama:</span>
-                <span class="branch-badge loading-branch" id="currentBranch"
-                    >Cargando...</span
-                >
+            <div class="header-left">
+                <div class="branch-badge-container" id="currentBranchContainer">
+                    <span class="branch-icon">
+                        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M10 13c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm-4-3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-3.5 1c0-1.2.8-2.2 1.9-2.4C4.6 6.3 6.1 4 8 4c1.6 0 2.9 1 3.6 2.4l1.3-.7C11.9 4 10.1 2.5 8 2.5 5.7 2.5 3.7 3.8 2.6 5.8 1.4 6 0 7.4 0 8.5c0 1.4 1.1 2.5 2.5 2.5s2.5-1.1 2.5-2.5c0-.6-.2-1.1-.5-1.5z"/></svg>
+                    </span>
+                    <span class="branch-name" id="currentBranch">Cargando...</span>
+                </div>
             </div>
-            <div class="header-actions">
-                <button class="icon-btn" id="magicBtn" title="Analizar con IA">
-                    <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                    >
-                        <path
-                            d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
-                        />
-                    </svg>
+            <div class="header-right">
+                <button class="icon-button" id="magicBtn" title="Analizar con IA (✨)">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a1 1 0 0 1 1 1v1.5a1 1 0 0 1-2 0V2a1 1 0 0 1 1-1zM4.5 4a1 1 0 0 1 0 1.4l-1 1A1 1 0 0 1 2 5l1-1A1 1 0 0 1 4.5 4zm8.5 1.4a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1-1.4 1.4l-1-1a1 1 0 0 1 0-1.4zM8 12a1 1 0 0 1 1 1v1.5a1 1 0 0 1-2 0V13a1 1 0 0 1 1-1zM4.5 10.6a1 1 0 0 1 0 1.4l-1 1a1 1 0 0 1-1.4-1.4l1-1a1 1 0 0 1 1.4 0zm8.5 0a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1-1.4 1.4l-1-1a1 1 0 0 1 0-1.4zM8 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
                 </button>
-                <button
-                    class="icon-btn"
-                    id="settingsBtn"
-                    title="Configuración de patrones"
-                >
-                    <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                    >
-                        <circle cx="12" cy="12" r="3" />
-                        <path
-                            d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"
-                        />
-                    </svg>
+                <button class="icon-button" id="settingsBtn" title="Configuración">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M9.1 13.4l.7 1.3-1.6.9-.7-1.3c-.5.1-1 .1-1.5 0l-.7 1.3-1.6-.9.7-1.3c-.5-.4-.9-.8-1.3-1.3l-1.3.7-.9-1.6 1.3-.7c-.1-.5-.1-1 0-1.5L.8 6.9l.9-1.6 1.3.7c.4-.5.8-.9 1.3-1.3l-.7-1.3 1.6-.9.7 1.3c.5-.1 1-.1 1.5 0l.7-1.3 1.6.9-.7 1.3c.5.4.9.8 1.3 1.3l1.3-.7.9 1.6-1.3.7c.1.5.1 1 0 1.5l1.3.7-.9 1.6-1.3-.7c-.4.5-.8.9-1.3 1.3zM6 9.5c1.9 0 3.5-1.6 3.5-3.5S7.9 2.5 6 2.5 2.5 4.1 2.5 6 4.1 9.5 6 9.5z"/></svg>
                 </button>
             </div>
         </header>
 
-        <div class="warning-text" id="warningText">
-            ⚠️ Estás en main. Se creará una rama automáticamente.
+        <div class="warning-banner" id="warningText" style="display: none;">
+            <span class="warning-icon">⚠️</span>
+            <span class="warning-message">Estás en main. Se creará una rama.</span>
         </div>
 
-        <!-- NOTIFICACIÓN -->
-        <div
-            id="errorMessage"
-            class="error-message"
-            style="display: none"
-        ></div>
+        <div id="errorMessage" class="notification-banner" style="display: none;"></div>
 
-        <!-- LOADER -->
-        <div id="loader" class="loader" style="display: none">
-            <div class="loader-spinner"></div>
-            <span>Analizando cambios...</span>
-        </div>
+        <!-- MAIN CONTENT -->
+        <main class="content-area">
+            
+            <!-- LOADER -->
+            <div id="loader" class="loader-container" style="display: none;">
+                <div class="spinner"></div>
+                <span class="loader-text">Analizando...</span>
+            </div>
 
-        <!-- PANTALLA DE BIENVENIDA -->
-        <div class="welcome-screen" id="welcomeScreen">
-            <section class="section" style="width: 100%; max-width: 400px">
-                <div class="section-header">
-                    <span class="section-title">⚙️ Configuración de IA</span>
+            <!-- WELCOME / ZERO STATE -->
+            <div class="welcome-container" id="welcomeScreen">
+                <div class="empty-state-icon">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M4.5 9.5V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v4.5M4.5 14.5V19a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-4.5M9 12h6"/>
+                    </svg>
                 </div>
-                <div class="section-content show">
-                    <select id="aiProvider" class="input-text">
-                        <option value="gemini">Google Gemini</option>
-                        <option value="huggingface">HuggingFace</option>
-                    </select>
-                    <input
-                        id="aiModel"
-                        class="input-text"
-                        placeholder="Modelo (ej: gemini-pro)"
-                    />
-                    <input
-                        id="aiKey"
-                        class="input-text"
-                        placeholder="Tu API Key"
-                        type="password"
-                    />
-                    <button class="btn btn-primary" id="saveAIConfig">
+                <h2 class="welcome-title">NeuroGit</h2>
+                <div class="config-card">
+                    <div class="form-group">
+                        <label>Proveedor</label>
+                        <select id="aiProvider" class="select-input">
+                            <option value="gemini">Google Gemini</option>
+                            <option value="huggingface">HuggingFace</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Modelo</label>
+                        <input id="aiModel" class="text-input" placeholder="Ej: gemini-pro">
+                    </div>
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input id="aiKey" class="text-input" type="password" placeholder="••••••••">
+                    </div>
+                    <button class="btn btn-primary btn-block" id="saveAIConfig">
                         Guardar Configuración
                     </button>
                 </div>
-            </section>
-            <div class="logo-container">
-                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <linearGradient
-                            id="grad1"
-                            x1="0%"
-                            y1="0%"
-                            x2="100%"
-                            y2="100%"
-                        >
-                            <stop
-                                offset="0%"
-                                style="stop-color: #667eea; stop-opacity: 1"
-                            />
-                            <stop
-                                offset="100%"
-                                style="stop-color: #764ba2; stop-opacity: 1"
-                            />
-                        </linearGradient>
-                    </defs>
-                    <circle
-                        cx="100"
-                        cy="100"
-                        r="90"
-                        fill="url(#grad1)"
-                        opacity="0.1"
-                    />
-                    <path
-                        d="M100 30 L130 70 L170 75 L135 110 L145 150 L100 125 L55 150 L65 110 L30 75 L70 70 Z"
-                        fill="url(#grad1)"
-                        stroke="url(#grad1)"
-                        stroke-width="2"
-                    />
-                    <circle cx="100" cy="100" r="15" fill="url(#grad1)" />
-                    <path
-                        d="M100 50 L100 85 M100 115 L100 150 M65 85 L85 95 M115 95 L135 85 M65 115 L85 105 M115 105 L135 115"
-                        stroke="url(#grad1)"
-                        stroke-width="3"
-                        stroke-linecap="round"
-                    />
-                </svg>
-                <h1 class="logo-title">NeuroGit</h1>
-            </div>
-        </div>
-
-        <!-- VISTA DE RESULTADOS -->
-        <div class="results-view" id="resultsView">
-            <div class="content">
-                <!-- RAMA SUGERIDA -->
-                <section class="section">
-                    <div class="section-header">
-                        <span class="section-title">🌿 Rama Sugerida</span>
-                    </div>
-                    <div class="section-content show">
-                        <input
-                            type="text"
-                            class="branch-input"
-                            id="branchSuggestion"
-                            placeholder="La rama sugerida aparecerá aquí..."
-                        />
-                    </div>
-                </section>
-
-                <!-- COMMITS SUGERIDOS -->
-                <section class="section">
-                    <div class="section-header">
-                        <span class="section-title">💬 Commits Sugeridos</span>
-                    </div>
-                    <div class="section-content show">
-                        <div id="commitsList"></div>
-                    </div>
-                </section>
             </div>
 
-            <!-- ACCIONES -->
-            <div class="actions">
-                <button class="btn btn-secondary" id="cancelBtn">
-                    Cancelar
+            <!-- RESULTS -->
+            <div class="results-container" id="resultsView">
+                
+                <!-- BRANCH SECTION -->
+                <div class="section-group">
+                    <div class="section-header">
+                        <span class="section-label">RAMA SUGERIDA</span>
+                    </div>
+                    <div class="input-wrapper">
+                        <input type="text" class="text-input branch-input" id="branchSuggestion" placeholder="Nombre de la rama...">
+                    </div>
+                </div>
+
+                <!-- COMMITS SECTION -->
+                <div class="section-group">
+                    <div class="section-header">
+                        <span class="section-label">COMMITS SUGERIDOS</span>
+                    </div>
+                    <div id="commitsList" class="commits-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- FOOTER ACTIONS -->
+        <footer class="footer-actions" id="footerActions">
+            <button class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+            <div class="split-button">
+                <button class="btn btn-primary" id="confirmBtn">Confirmar</button>
+                <button class="btn btn-primary icon-only" id="dropdownBtn">
+                    <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor"><path d="M1 1l4 4 4-4"/></svg>
                 </button>
-                <div class="btn-primary-group">
-                    <button class="btn btn-primary" id="confirmBtn">
-                        ✓ Commit Local
-                    </button>
-                    <button class="btn btn-dropdown" id="dropdownBtn">▼</button>
-                    <div class="dropdown-menu" id="dropdownMenu">
-                        <div class="dropdown-item" data-action="commit-local">
-                            <div class="dropdown-item-title">Commit Local</div>
-                            <div class="dropdown-item-description">
-                                Solo guardar localmente
-                            </div>
-                        </div>
-                        <div class="dropdown-item" data-action="commit-publish">
-                            <div class="dropdown-item-title">
-                                Commit y Publicar
-                            </div>
-                            <div class="dropdown-item-description">
-                                Guardar y subir a GitHub
-                            </div>
-                        </div>
+                <div class="dropdown-popover" id="dropdownMenu">
+                    <div class="dropdown-option" data-action="commit-local">
+                        <span class="option-title">Commit Local</span>
+                        <span class="option-desc">Solo guardar en local</span>
+                    </div>
+                    <div class="dropdown-option" data-action="commit-publish">
+                        <span class="option-title">Commit y Publicar</span>
+                        <span class="option-desc">Push al remoto</span>
                     </div>
                 </div>
             </div>
-        </div>
+        </footer>
 
-        <!-- MODAL DE CONFIGURACIÓN DE PATRONES -->
-        <div class="modal-overlay" id="patternModal">
-            <div class="modal">
-                <div class="modal-header">
-                    <span class="modal-title"
-                        >🔧 Configuración de Patrones</span
-                    >
-                    <button class="modal-close" id="closePatternModal">
-                        &times;
-                    </button>
+    </div>
+
+    <!-- MODAL PATTERNS -->
+    <div class="modal-backdrop" id="patternModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h3>Patrones de Rama</h3>
+                <button class="close-btn" id="closePatternModal">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-info">Variables: <code>{type}</code>, <code>{name}</code>, <code>{ticket}</code></p>
+                <input type="text" id="branchPattern" class="text-input" placeholder="{type}/{name}">
+                <div class="preview-box">
+                    <span>Vista previa:</span>
+                    <code id="patternExample"></code>
                 </div>
-                <div class="section-content show">
-                    <div class="section-subtitle" style="margin-bottom: 15px">
-                        Define cómo se crearán las ramas usando variables:
-                    </div>
-                    <div
-                        style="
-                            background: var(--vscode-textBlockQuote-background);
-                            padding: 10px;
-                            border-radius: 4px;
-                            margin-bottom: 10px;
-                            font-size: 12px;
-                        "
-                    >
-                        <strong>Variables disponibles:</strong><br />
-                        • <code>{type}</code> - Tipo de cambio (features, fixes,
-                        docs, etc.)<br />
-                        • <code>{name}</code> - Nombre descriptivo generado por
-                        IA<br />
-                        • <code>{ticket}</code> - Número de ticket detectado
-                        (ej: JIRA-123)
-                    </div>
-                    <input
-                        type="text"
-                        id="branchPattern"
-                        class="input-text"
-                        placeholder="Ej: {type}/{ticket}-{name} o {type}/{name}"
-                    />
-                    <div class="pattern-preview">
-                        <strong>Vista previa:</strong>
-                        <code id="patternExample"></code>
-                    </div>
-                    <button
-                        class="btn btn-primary"
-                        id="savePatternBtn"
-                        style="margin-top: 15px; width: 100%"
-                    >
-                        Guardar Patrón
-                    </button>
-                </div>
+                <button class="btn btn-primary btn-block" id="savePatternBtn" style="margin-top: 16px;">Guardar</button>
             </div>
         </div>
-        <script nonce="{{nonce}}" src="{{pathJS}}"></script>
-    </body>
+    </div>
+
+    <script nonce="{{nonce}}" src="{{pathJS}}"></script>
+</body>
 </html>

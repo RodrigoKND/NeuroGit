@@ -10,12 +10,13 @@ const handlers = {
         const el = $('#currentBranch');
         if (el) {
             el.textContent = branchName;
-            el.className = main ? 'branch-badge warning' : 'branch-badge';
+            // Linear style: just change text color or icon, don't break layout
+            el.className = main ? 'branch-name warning' : 'branch-name';
         }
         const warn = $('#warningText');
-        if (warn) warn.style.display = main ? 'block' : 'none';
+        if (warn) warn.style.display = main ? 'flex' : 'none'; // Flex because we used flex in CSS
     },
-    
+
     branchCreationSuggestion: ({ show, name }) => {
         const input = $('#branchSuggestion');
         if (input && show) {
@@ -28,46 +29,53 @@ const handlers = {
         commitsData = commits;
         const container = $('#commitsList');
         if (!container) return;
-        
+
         container.innerHTML = '';
-        
+
         if (Object.keys(commits).length === 0) {
-            container.innerHTML = '<div class="empty-state">No hay commits sugeridos</div>';
+            container.innerHTML = '<div class="empty-state">No hay cambios sugeridos para confirmar</div>';
             return;
         }
-        
+
         for (const file in commits) {
             const commit = commits[file];
             const div = document.createElement('div');
-            div.className = 'commit-item';
+            div.className = 'commit-card';
             div.innerHTML = `
-                <div class="commit-file">${file}</div>
-                <div class="commit-input-group">
-                    <select class="commit-type-select" data-file="${file}">
-                        <option value="feat" ${commit.type === 'feat' ? 'selected' : ''}>FEAT</option>
-                        <option value="fix" ${commit.type === 'fix' ? 'selected' : ''}>FIX</option>
-                        <option value="docs" ${commit.type === 'docs' ? 'selected' : ''}>DOCS</option>
-                        <option value="style" ${commit.type === 'style' ? 'selected' : ''}>STYLE</option>
-                        <option value="refactor" ${commit.type === 'refactor' ? 'selected' : ''}>REFACTOR</option>
-                        <option value="test" ${commit.type === 'test' ? 'selected' : ''}>TEST</option>
-                        <option value="chore" ${commit.type === 'chore' ? 'selected' : ''}>CHORE</option>
-                        <option value="perf" ${commit.type === 'perf' ? 'selected' : ''}>PERF</option>
-                        <option value="build" ${commit.type === 'build' ? 'selected' : ''}>BUILD</option>
-                        <option value="ci" ${commit.type === 'ci' ? 'selected' : ''}>CI</option>
-                        <option value="revert" ${commit.type === 'revert' ? 'selected' : ''}>REVERT</option>
-                    </select>
-                    <input 
-                        type="text" 
-                        class="commit-message-input" 
-                        value="${commit.message}"
-                        data-file="${file}"
-                        placeholder="Mensaje del commit"
-                    />
+                <div class="commit-header">
+                    <div class="file-icon">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.71 4.29l-3-3L10 1H4L3 2v12l1 1h9l1-1V5l-.29-.71zM13 14H4V2h5v4h4v8z"/></svg>
+                    </div>
+                    <span class="commit-filename">${file}</span>
+                </div>
+                <div class="commit-body">
+                    <div class="commit-row">
+                        <select class="commit-type-select" data-file="${file}">
+                            <option value="feat" ${commit.type === 'feat' ? 'selected' : ''}>FEAT</option>
+                            <option value="fix" ${commit.type === 'fix' ? 'selected' : ''}>FIX</option>
+                            <option value="docs" ${commit.type === 'docs' ? 'selected' : ''}>DOCS</option>
+                            <option value="style" ${commit.type === 'style' ? 'selected' : ''}>STYLE</option>
+                            <option value="refactor" ${commit.type === 'refactor' ? 'selected' : ''}>REFACTOR</option>
+                            <option value="test" ${commit.type === 'test' ? 'selected' : ''}>TEST</option>
+                            <option value="chore" ${commit.type === 'chore' ? 'selected' : ''}>CHORE</option>
+                            <option value="perf" ${commit.type === 'perf' ? 'selected' : ''}>PERF</option>
+                            <option value="build" ${commit.type === 'build' ? 'selected' : ''}>BUILD</option>
+                            <option value="ci" ${commit.type === 'ci' ? 'selected' : ''}>CI</option>
+                            <option value="revert" ${commit.type === 'revert' ? 'selected' : ''}>REVERT</option>
+                        </select>
+                        <input 
+                            type="text" 
+                            class="commit-message-input" 
+                            value="${commit.message}"
+                            data-file="${file}"
+                            placeholder="Descripción del cambio..."
+                        />
+                    </div>
                 </div>
             `;
             container.appendChild(div);
         }
-        
+
         // Event listeners para cambios
         $$('.commit-type-select').forEach(select => {
             select.addEventListener('change', (e) => {
@@ -75,14 +83,14 @@ const handlers = {
                 commitsData[file].type = e.target.value;
             });
         });
-        
+
         $$('.commit-message-input').forEach(input => {
             input.addEventListener('input', (e) => {
                 const file = e.target.dataset.file;
                 commitsData[file].message = e.target.value;
             });
         });
-        
+
         showResults();
     },
 
@@ -90,11 +98,11 @@ const handlers = {
         const provider = $('#aiProvider');
         const model = $('#aiModel');
         const apiKey = $('#aiKey');
-        
+
         if (provider) provider.value = config.provider || 'gemini';
         if (model) model.value = config.model || '';
         if (apiKey) apiKey.value = config.apiKey || '';
-        
+
         // Si ya tiene config, mostrar resultados si hay cache
         if (config.apiKey && config.model) {
             const welcome = $('#welcomeScreen');
@@ -153,11 +161,11 @@ const handlers = {
 function showNotification(message, type = 'info') {
     const errorEl = $('#errorMessage');
     if (!errorEl) return;
-    
+
     errorEl.textContent = message;
     errorEl.className = `error-message ${type}`;
     errorEl.style.display = 'block';
-    
+
     setTimeout(() => {
         errorEl.style.display = 'none';
     }, 3000);
@@ -179,7 +187,7 @@ function updatePatternExample() {
     const input = $('#branchPattern');
     const example = $('#patternExample');
     if (!input || !example) return;
-    
+
     const pattern = input.value || '{type}/{name}';
     example.textContent = pattern
         .replace('{type}', 'features')
@@ -258,7 +266,7 @@ if (saveAIConfig) {
         const provider = $('#aiProvider');
         const model = $('#aiModel');
         const apiKey = $('#aiKey');
-        
+
         if (!provider || !model || !apiKey) return;
 
         if (!model.value || !apiKey.value) {
@@ -285,7 +293,7 @@ if (dropdownBtn && dropdownMenu) {
         e.stopPropagation();
         dropdownMenu.classList.toggle('show');
     });
-    
+
     document.addEventListener('click', () => {
         dropdownMenu.classList.remove('show');
     });
@@ -297,8 +305,8 @@ $$('.dropdown-item').forEach(item => {
         currentAction = item.dataset.action;
         const confirmBtn = $('#confirmBtn');
         if (confirmBtn) {
-            confirmBtn.textContent = currentAction === 'commit-local' 
-                ? '✓ Commit Local' 
+            confirmBtn.textContent = currentAction === 'commit-local'
+                ? '✓ Commit Local'
                 : '✓ Commit y Publicar';
         }
         dropdownMenu.classList.remove('show');
@@ -310,17 +318,17 @@ const confirmBtn = $('#confirmBtn');
 if (confirmBtn) {
     confirmBtn.addEventListener('click', () => {
         const branchName = $('#branchSuggestion')?.value;
-        
+
         if (!branchName) {
             showNotification('Debes tener una rama sugerida', 'error');
             return;
         }
-        
+
         if (Object.keys(commitsData).length === 0) {
             showNotification('No hay commits para confirmar', 'error');
             return;
         }
-        
+
         vscode.postMessage({
             type: 'confirmCommit',
             payload: {

@@ -195,18 +195,30 @@ var GitController = class {
   analysisCache = null;
   branchPattern = "{type}/{name}";
   async loadCache() {
-    this.analysisCache = this.context.workspaceState.get("neurogit.lastAnalysis", null);
+    this.analysisCache = this.context.workspaceState.get(
+      "neurogit.lastAnalysis",
+      null
+    );
   }
   async saveCache() {
     if (this.analysisCache) {
-      await this.context.workspaceState.update("neurogit.lastAnalysis", this.analysisCache);
+      await this.context.workspaceState.update(
+        "neurogit.lastAnalysis",
+        this.analysisCache
+      );
     }
   }
   async loadBranchPattern() {
-    this.branchPattern = this.context.workspaceState.get("neurogit.branchPattern", "{type}/{name}");
+    this.branchPattern = this.context.workspaceState.get(
+      "neurogit.branchPattern",
+      "{type}/{name}"
+    );
   }
   async saveBranchPattern() {
-    await this.context.workspaceState.update("neurogit.branchPattern", this.branchPattern);
+    await this.context.workspaceState.update(
+      "neurogit.branchPattern",
+      this.branchPattern
+    );
   }
   sendInitialData() {
     this.sendAIConfig();
@@ -247,7 +259,9 @@ var GitController = class {
   async handleSaveConfig(cfg) {
     try {
       await this.ai.saveConfig(cfg);
-      vscode.window.showInformationMessage("\u2713 Configuraci\xF3n de IA guardada correctamente");
+      vscode.window.showInformationMessage(
+        "\u2713 Configuraci\xF3n de IA guardada correctamente"
+      );
       this.view.postMessage({
         type: "configSaved",
         payload: { message: "\u2713 Configuraci\xF3n guardada" }
@@ -281,7 +295,9 @@ var GitController = class {
         try {
           await this.repo.createBranch(branch, true);
           await this.repo.checkout(branch);
-          vscode.window.showInformationMessage(`\u2713 Rama ${branch} creada y cambiada`);
+          vscode.window.showInformationMessage(
+            `\u2713 Rama ${branch} creada y cambiada`
+          );
         } catch (err) {
           vscode.window.showErrorMessage(`Error al crear rama: ${err.message}`);
           return;
@@ -312,9 +328,13 @@ var GitController = class {
       if (action === "commit-publish") {
         try {
           await this.repo.push();
-          vscode.window.showInformationMessage("\u2713 Commits realizados y publicados");
+          vscode.window.showInformationMessage(
+            "\u2713 Commits realizados y publicados"
+          );
         } catch (err) {
-          vscode.window.showWarningMessage(`Commits realizados pero no se pudo publicar: ${err.message}`);
+          vscode.window.showWarningMessage(
+            `Commits realizados pero no se pudo publicar: ${err.message}`
+          );
         }
       } else {
         vscode.window.showInformationMessage("\u2713 Commits realizados localmente");
@@ -364,11 +384,11 @@ var GitController = class {
     }
     try {
       this.view.postMessage({ type: "showLoader" });
-      const files = [
+      const changes = [
         ...this.repo.state.workingTreeChanges || [],
         ...this.repo.state.indexChanges || []
-      ].map((c) => vscode.workspace.asRelativePath(c.uri));
-      if (!files.length) {
+      ];
+      if (!changes.length) {
         this.view.postMessage({
           type: "error",
           payload: { message: "No hay archivos modificados" }
@@ -376,30 +396,60 @@ var GitController = class {
         this.view.postMessage({ type: "hideLoader" });
         return;
       }
-      const prompt = `Analiza estos archivos modificados y devuelve SOLO un JSON v\xE1lido:
-${files.map((f) => `- ${f}`).join("\n")}
+      const filesWithDiff = await Promise.all(
+        changes.map(async (change) => {
+          const relativePath = vscode.workspace.asRelativePath(change.uri);
+          try {
+            const diff = await this.repo.diffWithHEAD(change.uri.fsPath);
+            return {
+              path: relativePath,
+              status: change.status,
+              diff: diff || "Archivo nuevo o eliminado"
+            };
+          } catch {
+            return {
+              path: relativePath,
+              status: change.status,
+              diff: "No se pudo obtener diff"
+            };
+          }
+        })
+      );
+      const prompt = `Analiza estos cambios de Git y devuelve SOLO un JSON v\xE1lido:
+
+${filesWithDiff.map(
+        (f) => `
+Archivo: ${f.path}
+Estado: ${f.status}
+Cambios:
+${f.diff}
+---`
+      ).join("\n")}
 
 IMPORTANTE: El usuario usa este patr\xF3n para nombrar ramas: "${this.branchPattern}"
 
 Variables disponibles:
-- {type} = Carpeta por tipo (features, fixes, docs, etc.)
-- {name} = Nombre descriptivo de la rama
+- {type} = Carpeta por tipo (features, fixes, docs, etc.) - s\xE9 muy espec\xEDfico y breve.
+- {name} = Nombre descriptivo de la rama seg\xFAn a los cambios que se realizaron, s\xE9 muy especifico y breve, no repitas el tipo del commit en la rama por ejemplo: refactor/refactor, no debe existir doble tipo solo uno: refactor/nombre-rama, esto es solo un ejemplo
 - {ticket} = N\xFAmero de ticket (ej: JIRA-123, si el usuario menciona un ticket en sus cambios)
+
+Analiza el diff real de cada archivo y crea mensajes de commit MUY espec\xEDficos que describan exactamente qu\xE9 se agreg\xF3, modific\xF3 o elimin\xF3.
 
 Responde SOLO con este formato JSON (sin texto adicional):
 {
-  "branch": "nombre-descriptivo-de-rama-SIN-tipo-ni-ticket",
+  "branch": "nombre-descriptivo-de-rama-ticket (si detectas un n\xFAmero de ticket en los cambios, sino d\xE9jalo vac\xEDo "")",
   "ticket": "TICKET-123" (solo si detectas un n\xFAmero de ticket en los cambios, sino d\xE9jalo vac\xEDo ""),
   "commits": {
     "archivo.js": {
-      "message": "descripci\xF3n clara del cambio",
+      "message": "descripci\xF3n MUY espec\xEDfica del cambio real (ej: 'remove unused imports', 'add validation for email field', 'fix null pointer in user service')",
       "type": "tipo-de-commit que ves conveniente seg\xFAn los cambios, solo usa los tipos v\xE1lidos como valores"
     }
   }
 }
 
-Tipos v\xE1lidos: "feat", "fix", "docs", "style", "test", "refactor", "perf", "test", "build", "ci", "chore", "revert",
-NOTA: NO incluyas el tipo (feat, fix, etc) en el nombre de la rama, solo un nombre descriptivo. Todo el contenido en ingl\xE9s.`;
+Tipos v\xE1lidos: "feat", "fix", "docs", "style", "test", "refactor", "perf", "build", "ci", "chore", "revert"
+NOTA: NO incluyas el tipo (feat, fix, etc) en el nombre de la rama, solo un nombre descriptivo. Todo el contenido en ingl\xE9s.
+IMPORTANTE: Analiza el diff l\xEDnea por l\xEDnea para ser preciso en el mensaje de commit.`;
       const resultText = await this.ai.run(prompt);
       let jsonText = resultText.trim();
       const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
@@ -410,7 +460,11 @@ NOTA: NO incluyas el tipo (feat, fix, etc) en el nombre de la rama, solo un nomb
       if (!data.branch || !data.commits) {
         throw new Error("Respuesta inv\xE1lida de la IA");
       }
-      const branchName = this.applyBranchPattern(data.branch, data.commits, data.ticket || "");
+      const branchName = this.applyBranchPattern(
+        data.branch,
+        data.commits,
+        data.ticket || ""
+      );
       this.analysisCache = {
         branch: branchName,
         commits: data.commits
@@ -443,13 +497,13 @@ NOTA: NO incluyas el tipo (feat, fix, etc) en el nombre de la rama, solo un nomb
     const types = Object.values(commits).map((c) => c.type);
     const type = types[0] || "feat";
     const typeMapping = {
-      "feat": "features",
-      "fix": "fixes",
-      "docs": "docs",
-      "style": "style",
-      "refactor": "refactor",
-      "test": "tests",
-      "chore": "chore"
+      feat: "features",
+      fix: "fixes",
+      docs: "docs",
+      style: "style",
+      refactor: "refactor",
+      test: "tests",
+      chore: "chore"
     };
     const folderName = typeMapping[type] || type;
     let result = this.branchPattern.replace("{type}", folderName).replace("{name}", suggestedName).replace("{ticket}", ticket);

@@ -49,7 +49,7 @@ body {
     padding: 12px var(--container-padding);
     border-bottom: 1px solid var(--border-color);
     background: var(--vscode-sideBar-background);
-    height: 48px;
+    height: max-content;
     flex-shrink: 0;
 }
 
@@ -439,6 +439,7 @@ body {
     justify-content: center;
     min-height: 400px;
     text-align: center;
+    margin: 20px 0px 20px 0px;
 }
 
 .welcome-container.hidden {

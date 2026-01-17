@@ -222,6 +222,13 @@ if (settingsBtn && patternModal) {
         patternModal.classList.add('show');
     });
 }
+const settingsAIBtn = $('#settingsAIBtn');
+if(settingsAIBtn) {
+    settingsAIBtn.addEventListener('click', () => {
+        $('#welcomeScreen').classList.toggle('hidden');
+    });
+}
+
 
 // Cerrar modal
 const closeModalBtn = $('#closePatternModal');
@@ -309,7 +316,10 @@ $$('.dropdown-item').forEach(item => {
                 ? '✓ Commit Local'
                 : '✓ Commit y Publicar';
         }
-        dropdownMenu.classList.remove('show');
+        
+        if (dropdownMenu) {
+            dropdownMenu.classList.remove('show');
+        }
     });
 });
 

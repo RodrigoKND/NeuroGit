@@ -40,7 +40,7 @@
                 {
                     "id": "neurogit",
                     "title": "NeuroGit",
-                    "icon": "media/icon.svg",
+                    "icon": "media/neurogit-dark.png",
                     "badge": "$(git-commit) $(neurogit.changesCount)"
                 }
             ]
@@ -51,7 +51,7 @@
                     "id": "neurogit.panel",
                     "name": "Changes",
                     "type": "webview",
-                    "icon": "media/icon.svg",
+                    "icon": "media/neurogit-dark.png",
                     "when": "neurogit.changesCount >= 0"
                 }
             ]

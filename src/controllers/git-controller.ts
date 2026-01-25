@@ -257,7 +257,7 @@ export class GitController {
   }
 
   private bindRepo() {
-    if (!this.repo) return;
+    if (!this.repo) { return; }
 
     this.repo.state.onDidChange(() => {
       this.sendCurrentBranchName();
@@ -326,19 +326,18 @@ export class GitController {
       const prompt = `Analiza estos cambios de Git y devuelve SOLO un JSON válido:
 
 ${filesWithDiff
-  .map(
-    (f) => `
+          .map(
+            (f) => `
 Archivo: ${f.path}
 Estado: ${f.status}
 Cambios:
 ${f.diff}
 ---`
-  )
-  .join("\n")}
+          )
+          .join("\n")}
 
-IMPORTANTE: El usuario usa este patrón para nombrar ramas: "${
-        this.branchPattern
-      }"
+IMPORTANTE: El usuario usa este patrón para nombrar ramas: "${this.branchPattern
+        }"
 
 Variables disponibles:
 - {type} = Carpeta por tipo (features, fixes, docs, etc.) - sé muy específico y breve.

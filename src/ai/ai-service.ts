@@ -1,20 +1,20 @@
 import * as vscode from 'vscode';
 import * as https from 'https';
 
-interface AIConfig { 
-    provider: string; 
-    model: string; 
-    apiKey: string; 
+interface AIConfig {
+    provider: string;
+    model: string;
+    apiKey: string;
 }
 
 export class AIService {
     private config: AIConfig;
 
     constructor(private readonly context: vscode.ExtensionContext) {
-        this.config = this.context.globalState.get('aiConfig', { 
-            provider: 'gemini', 
-            model: '', 
-            apiKey: '' 
+        this.config = this.context.globalState.get('aiConfig', {
+            provider: 'gemini',
+            model: '',
+            apiKey: ''
         });
     }
 
@@ -55,22 +55,22 @@ export class AIService {
                 });
             });
             req.on('error', reject);
-            if (body) req.write(body);
+            if (body) { req.write(body); }
             req.end();
         });
     }
 
     private async runHuggingFace(prompt: string): Promise<string> {
         const { apiKey, model } = this.config;
-        
+
         try {
             const body = JSON.stringify({ inputs: prompt });
             const data = await this.httpsRequest(
                 `https://api-inference.huggingface.co/models/${model}`,
                 {
                     method: 'POST',
-                    headers: { 
-                        'Authorization': `Bearer ${apiKey}`, 
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
                         'Content-Type': 'application/json',
                         'Content-Length': Buffer.byteLength(body)
                     }
@@ -79,7 +79,7 @@ export class AIService {
             );
 
             const json: any = JSON.parse(data);
-            
+
             if (json.error) {
                 throw new Error(json.error);
             }
@@ -92,17 +92,17 @@ export class AIService {
 
     private async runGemini(prompt: string): Promise<string> {
         const { apiKey, model } = this.config;
-        
+
         try {
-            const body = JSON.stringify({ 
-                contents: [{ parts: [{ text: prompt }] }] 
+            const body = JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
             });
 
             const data = await this.httpsRequest(
                 `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
                 {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'Content-Length': Buffer.byteLength(body)
                     }
@@ -111,7 +111,7 @@ export class AIService {
             );
 
             const json: any = JSON.parse(data);
-            
+
             if (json.error) {
                 throw new Error(json.error.message);
             }

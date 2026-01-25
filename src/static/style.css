@@ -407,15 +407,40 @@ body {
 }
 
 .dropdown-option {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 8px 12px;
     cursor: pointer;
     border-radius: var(--radius-sm);
     transition: background 0.1s;
+    border-left: 2px solid transparent;
 }
 
 .dropdown-option:hover {
     background-color: var(--vscode-menu-selectionBackground);
     color: var(--vscode-menu-selectionForeground);
+}
+
+.dropdown-option.active {
+    background-color: var(--vscode-list-activeSelectionBackground);
+    color: var(--vscode-list-activeSelectionForeground);
+    border-left-color: var(--vscode-focusBorder);
+}
+
+.dropdown-option .check-mark {
+    display: none;
+    font-weight: bold;
+    color: var(--vscode-focusBorder);
+}
+
+.dropdown-option.active .check-mark {
+    display: block;
+}
+
+.option-content {
+    display: flex;
+    flex-direction: column;
 }
 
 .option-title {
@@ -446,11 +471,7 @@ body {
     display: none;
 }
 
-.empty-state-icon {
-    color: var(--vscode-textLink-activeForeground);
-    margin-bottom: 16px;
-    opacity: 0.8;
-}
+/* .empty-state-icon removed - replaced by logo */
 
 .welcome-title {
     font-size: 24px;
@@ -574,14 +595,28 @@ code {
     padding: 40px 0;
 }
 
+.loader-content {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+}
+
+.loader-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+}
+
 .spinner {
-    width: 24px;
-    height: 24px;
-    border: 3px solid var(--border-color);
-    border-top-color: var(--vscode-progressBar-background);
+    position: absolute;
+    width: 64px;
+    height: 64px;
+    border: 2px solid transparent;
+    border-top: 2px solid var(--vscode-progressBar-background);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-bottom: 12px;
+    animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
@@ -591,6 +626,32 @@ code {
 }
 
 .loader-text {
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 500;
     color: var(--vscode-descriptionForeground);
+}
+
+/* === BRANDING === */
+.welcome-logo-container {
+    margin-bottom: 24px;
+    animation: logoFloat 4s ease-in-out infinite;
+}
+
+.welcome-logo {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+}
+
+@keyframes logoFloat {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-8px);
+    }
 }

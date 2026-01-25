@@ -14,7 +14,7 @@ const handlers = {
             el.className = main ? 'branch-name warning' : 'branch-name';
         }
         const warn = $('#warningText');
-        if (warn) warn.style.display = main ? 'flex' : 'none'; // Flex because we used flex in CSS
+        if (warn) { warn.style.display = main ? 'flex' : 'none'; }
     },
 
     branchCreationSuggestion: ({ show, name }) => {
@@ -28,7 +28,7 @@ const handlers = {
     commitsByFile: (commits) => {
         commitsData = commits;
         const container = $('#commitsList');
-        if (!container) return;
+        if (!container) { return; }
 
         container.innerHTML = '';
 
@@ -99,9 +99,9 @@ const handlers = {
         const model = $('#aiModel');
         const apiKey = $('#aiKey');
 
-        if (provider) provider.value = config.provider || 'gemini';
-        if (model) model.value = config.model || '';
-        if (apiKey) apiKey.value = config.apiKey || '';
+        if (provider) { provider.value = config.provider || 'gemini'; }
+        if (model) { model.value = config.model || ''; }
+        if (apiKey) { apiKey.value = config.apiKey || ''; }
 
         // Si ya tiene config, mostrar resultados si hay cache
         if (config.apiKey && config.model) {
@@ -123,7 +123,7 @@ const handlers = {
     configSaved: ({ message }) => {
         showNotification(message, 'success');
         const welcome = $('#welcomeScreen');
-        if (welcome) welcome.classList.add('hidden');
+        if (welcome) { welcome.classList.add('hidden'); }
     },
 
     patternSaved: ({ message }) => {
@@ -133,12 +133,37 @@ const handlers = {
 
     showLoader: () => {
         const loader = $('#loader');
-        if (loader) loader.style.display = 'flex';
+        const results = $('#resultsView');
+        const welcome = $('#welcomeScreen');
+        const footer = $('#footerActions');
+
+        if (loader) { loader.style.display = 'flex'; }
+        if (results) { results.classList.remove('show'); }
+        if (welcome) { welcome.classList.add('hidden'); }
+        if (footer) { footer.style.display = 'none'; }
     },
 
     hideLoader: () => {
         const loader = $('#loader');
-        if (loader) loader.style.display = 'none';
+        if (loader) {
+            loader.style.display = 'none';
+            // Restaurar vista según datos
+            if (Object.keys(commitsData).length > 0) {
+                switchView('results');
+            } else {
+                switchView('welcome');
+            }
+        }
+    },
+
+    updateViews: (hasConfig) => {
+        if (!hasConfig) {
+            switchView('welcome');
+        } else if (Object.keys(commitsData).length > 0) {
+            switchView('results');
+        } else {
+            // Keep current view or default to welcome if nothing is happening
+        }
     },
 
     error: ({ message }) => {
@@ -151,8 +176,8 @@ const handlers = {
         setTimeout(() => {
             const branchInput = $('#branchSuggestion');
             const commitsList = $('#commitsList');
-            if (branchInput) branchInput.value = '';
-            if (commitsList) commitsList.innerHTML = '';
+            if (branchInput) { branchInput.value = ''; }
+            if (commitsList) { commitsList.innerHTML = ''; }
             commitsData = {};
         }, 2000);
     }
@@ -160,7 +185,7 @@ const handlers = {
 
 function showNotification(message, type = 'info') {
     const errorEl = $('#errorMessage');
-    if (!errorEl) return;
+    if (!errorEl) { return; }
 
     errorEl.textContent = message;
     errorEl.className = `error-message ${type}`;
@@ -171,22 +196,35 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-function showResults() {
+function switchView(view) {
     const welcome = $('#welcomeScreen');
     const results = $('#resultsView');
-    if (welcome) welcome.classList.add('hidden');
-    if (results) results.classList.add('show');
+    const footer = $('#footerActions');
+
+    if (view === 'welcome') {
+        if (welcome) { welcome.classList.remove('hidden'); }
+        if (results) { results.classList.remove('show'); }
+        if (footer) { footer.style.display = 'none'; }
+    } else if (view === 'results') {
+        if (welcome) { welcome.classList.add('hidden'); }
+        if (results) { results.classList.add('show'); }
+        if (footer) { footer.style.display = 'flex'; }
+    }
+}
+
+function showResults() {
+    switchView('results');
 }
 
 function closePatternModal() {
     const modal = $('#patternModal');
-    if (modal) modal.classList.remove('show');
+    if (modal) { modal.classList.remove('show'); }
 }
 
 function updatePatternExample() {
     const input = $('#branchPattern');
     const example = $('#patternExample');
-    if (!input || !example) return;
+    if (!input || !example) { return; }
 
     const pattern = input.value || '{type}/{name}';
     example.textContent = pattern
@@ -223,9 +261,19 @@ if (settingsBtn && patternModal) {
     });
 }
 const settingsAIBtn = $('#settingsAIBtn');
-if(settingsAIBtn) {
+if (settingsAIBtn) {
     settingsAIBtn.addEventListener('click', () => {
-        $('#welcomeScreen').classList.toggle('hidden');
+        const welcome = $('#welcomeScreen');
+        if (welcome && welcome.classList.contains('hidden')) {
+            switchView('welcome');
+        } else {
+            // Revert back to results if we have data
+            if (Object.keys(commitsData).length > 0) {
+                switchView('results');
+            } else {
+                switchView('welcome');
+            }
+        }
     });
 }
 
@@ -274,7 +322,7 @@ if (saveAIConfig) {
         const model = $('#aiModel');
         const apiKey = $('#aiKey');
 
-        if (!provider || !model || !apiKey) return;
+        if (!provider || !model || !apiKey) { return; }
 
         if (!model.value || !apiKey.value) {
             showNotification('Completa modelo y API Key', 'error');
@@ -307,16 +355,22 @@ if (dropdownBtn && dropdownMenu) {
 }
 
 // Dropdown items
-$$('.dropdown-item').forEach(item => {
+$$('.dropdown-option').forEach(item => {
     item.addEventListener('click', () => {
         currentAction = item.dataset.action;
+
+        // Actualizar UI del menú
+        $$('.dropdown-option').forEach(opt => opt.classList.remove('active'));
+        item.classList.add('active');
+
+        // Actualizar botón principal
         const confirmBtn = $('#confirmBtn');
         if (confirmBtn) {
             confirmBtn.textContent = currentAction === 'commit-local'
-                ? '✓ Commit Local'
-                : '✓ Commit y Publicar';
+                ? 'Confirmar Local'
+                : 'Confirmar y Publicar';
         }
-        
+
         if (dropdownMenu) {
             dropdownMenu.classList.remove('show');
         }

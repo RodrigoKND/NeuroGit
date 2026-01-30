@@ -89,7 +89,9 @@ var AIService = class {
         });
       });
       req.on("error", reject);
-      if (body) req.write(body);
+      if (body) {
+        req.write(body);
+      }
       req.end();
     });
   }
@@ -328,21 +330,29 @@ var GitController = class {
       if (action === "commit-publish") {
         try {
           await this.repo.push();
-          vscode.window.showInformationMessage(
-            "\u2713 Commits realizados y publicados"
-          );
+          const successMsg = "se ha completado exitosamente la publicaci\xF3n del commit";
+          vscode.window.showInformationMessage(`\u2713 ${successMsg}`);
+          this.view.postMessage({
+            type: "commitSuccess",
+            payload: { message: `\u2713 ${successMsg}` }
+          });
         } catch (err) {
           vscode.window.showWarningMessage(
             `Commits realizados pero no se pudo publicar: ${err.message}`
           );
+          this.view.postMessage({
+            type: "commitSuccess",
+            payload: { message: "\u2713 Commits realizados localmente (fall\xF3 el push)" }
+          });
         }
       } else {
-        vscode.window.showInformationMessage("\u2713 Commits realizados localmente");
+        const successMsg = "se ha completado exitosamente el commit local";
+        vscode.window.showInformationMessage(`\u2713 ${successMsg}`);
+        this.view.postMessage({
+          type: "commitSuccess",
+          payload: { message: `\u2713 ${successMsg}` }
+        });
       }
-      this.view.postMessage({
-        type: "commitSuccess",
-        payload: { message: "\u2713 Proceso completado" }
-      });
       this.analysisCache = null;
       await this.saveCache();
     } catch (err) {
@@ -360,7 +370,9 @@ var GitController = class {
     });
   }
   bindRepo() {
-    if (!this.repo) return;
+    if (!this.repo) {
+      return;
+    }
     this.repo.state.onDidChange(() => {
       this.sendCurrentBranchName();
     });
@@ -474,7 +486,8 @@ IMPORTANTE: Analiza el diff l\xEDnea por l\xEDnea para ser preciso en el mensaje
         type: "branchCreationSuggestion",
         payload: {
           show: true,
-          name: branchName
+          name: branchName,
+          ticket: data.ticket || ""
         }
       });
       this.view.postMessage({
@@ -519,15 +532,26 @@ var NeuroGitPanel = class {
     this.git = git;
   }
   static viewType = "neurogit.panel";
+  view;
   resolveWebviewView(view) {
+    this.view = view;
     view.webview.options = {
       enableScripts: true,
       localResourceRoots: [
-        vscode2.Uri.file(path.join(this.context.extensionPath, "src/static"))
+        vscode2.Uri.file(path.join(this.context.extensionPath, "src/static")),
+        vscode2.Uri.file(path.join(this.context.extensionPath, "media"))
       ]
     };
     view.webview.html = this.getHtml(view.webview);
     new GitController(view.webview, this.git, this.context);
+    vscode2.window.onDidChangeActiveColorTheme(() => {
+      view.webview.html = this.getHtml(view.webview);
+    });
+  }
+  updateBadge(count) {
+    if (this.view) {
+      this.view.badge = count > 0 ? { value: count, tooltip: `${count} cambios pendientes` } : void 0;
+    }
   }
   getHtml(webview) {
     const base = this.context.extensionPath;
@@ -542,7 +566,13 @@ var NeuroGitPanel = class {
     const cssUri = webview.asWebviewUri(
       vscode2.Uri.file(path.join(base, "src/static/style.css"))
     );
-    return html.replace("{{nonce}}", nonce).replace("{{pathJS}}", jsUri.toString()).replace("{{pathCSS}}", cssUri.toString());
+    const themeKind = vscode2.window.activeColorTheme.kind;
+    const isDark = themeKind === vscode2.ColorThemeKind.Dark || themeKind === vscode2.ColorThemeKind.HighContrast;
+    const logoName = isDark ? "neurogit-dark.png" : "neurogit-light.png";
+    const logoUri = webview.asWebviewUri(
+      vscode2.Uri.file(path.join(base, "media", logoName))
+    );
+    return html.replace("{{nonce}}", nonce).replace("{{pathJS}}", jsUri.toString()).replace("{{pathCSS}}", cssUri.toString()).replaceAll("{{logoUri}}", logoUri.toString());
   }
   getNonce() {
     let text = "";
@@ -596,30 +626,30 @@ async function activate(context) {
     panel
   );
   context.subscriptions.push(provider);
-  updateChangesBadge(git);
+  updateChangesBadge(git, panel);
   const repo = git.getCurrentRepository();
   if (repo) {
     repo.state.onDidChange(() => {
-      updateChangesBadge(git);
+      updateChangesBadge(git, panel);
     });
   }
   git.gitApi.onDidOpenRepository((newRepo) => {
     newRepo.state.onDidChange(() => {
-      updateChangesBadge(git);
+      updateChangesBadge(git, panel);
     });
-    updateChangesBadge(git);
+    updateChangesBadge(git, panel);
   });
 }
-function updateChangesBadge(git) {
+function updateChangesBadge(git, panel) {
   const repo = git.getCurrentRepository();
   if (!repo) {
-    vscode4.commands.executeCommand("setContext", "neurogit.changesCount", 0);
+    panel.updateBadge(0);
     return;
   }
   const workingChanges = repo.state.workingTreeChanges?.length || 0;
   const indexChanges = repo.state.indexChanges?.length || 0;
   const totalChanges = workingChanges + indexChanges;
-  vscode4.commands.executeCommand("setContext", "neurogit.changesCount", totalChanges);
+  panel.updateBadge(totalChanges);
 }
 function deactivate() {
 }

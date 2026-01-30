@@ -4,6 +4,9 @@ const $$ = node => document.querySelectorAll(node);
 
 let currentAction = 'commit-local';
 let commitsData = {};
+let hasAIConfig = false;
+let currentPattern = '{type}/{name}';
+let currentTicket = '';
 
 const handlers = {
     currentBranchName: ({ branchName, main }) => {
@@ -14,13 +17,14 @@ const handlers = {
             el.className = main ? 'branch-name warning' : 'branch-name';
         }
         const warn = $('#warningText');
-        if (warn) warn.style.display = main ? 'flex' : 'none'; // Flex because we used flex in CSS
+        if (warn) { warn.style.display = main ? 'flex' : 'none'; }
     },
 
-    branchCreationSuggestion: ({ show, name }) => {
+    branchCreationSuggestion: ({ show, name, ticket }) => {
         const input = $('#branchSuggestion');
         if (input && show) {
             input.value = name;
+            currentTicket = ticket || '';
             showResults();
         }
     },
@@ -28,7 +32,7 @@ const handlers = {
     commitsByFile: (commits) => {
         commitsData = commits;
         const container = $('#commitsList');
-        if (!container) return;
+        if (!container) { return; }
 
         container.innerHTML = '';
 
@@ -81,6 +85,7 @@ const handlers = {
             select.addEventListener('change', (e) => {
                 const file = e.target.dataset.file;
                 commitsData[file].type = e.target.value;
+                updateSuggestedBranch();
             });
         });
 
@@ -88,6 +93,7 @@ const handlers = {
             input.addEventListener('input', (e) => {
                 const file = e.target.dataset.file;
                 commitsData[file].message = e.target.value;
+                updateSuggestedBranch();
             });
         });
 
@@ -99,31 +105,38 @@ const handlers = {
         const model = $('#aiModel');
         const apiKey = $('#aiKey');
 
-        if (provider) provider.value = config.provider || 'gemini';
-        if (model) model.value = config.model || '';
-        if (apiKey) apiKey.value = config.apiKey || '';
+        if (provider) { provider.value = config.provider || 'gemini'; }
+        if (model) { model.value = config.model || ''; }
+        if (apiKey) { apiKey.value = config.apiKey || ''; }
 
-        // Si ya tiene config, mostrar resultados si hay cache
-        if (config.apiKey && config.model) {
+        hasAIConfig = !!(config.apiKey && config.model);
+
+        if (hasAIConfig) {
             const welcome = $('#welcomeScreen');
-            if (welcome && !welcome.classList.contains('hidden')) {
-                // No ocultar aún, esperar a que haya datos
+            if (welcome) { welcome.classList.add('hidden'); }
+
+            if (Object.keys(commitsData).length > 0) {
+                showResults();
             }
         }
     },
 
     loadBranchPattern: (pattern) => {
         const input = $('#branchPattern');
+        currentPattern = pattern || '{type}/{name}';
         if (input) {
-            input.value = pattern || '{type}/{name}';
+            input.value = currentPattern;
             updatePatternExample();
         }
+        updateSuggestedBranch();
     },
 
     configSaved: ({ message }) => {
         showNotification(message, 'success');
+        hasAIConfig = true;
+        // Solo ocultar welcome, no saltar a resultados aún si no hay datos
         const welcome = $('#welcomeScreen');
-        if (welcome) welcome.classList.add('hidden');
+        if (welcome) { welcome.classList.add('hidden'); }
     },
 
     patternSaved: ({ message }) => {
@@ -133,12 +146,39 @@ const handlers = {
 
     showLoader: () => {
         const loader = $('#loader');
-        if (loader) loader.style.display = 'flex';
+        const results = $('#resultsView');
+        const welcome = $('#welcomeScreen');
+        const footer = $('#footerActions');
+
+        if (loader) { loader.style.display = 'flex'; }
+        if (results) { results.classList.remove('show'); }
+        if (welcome) { welcome.classList.add('hidden'); }
+        if (footer) { footer.style.display = 'none'; }
     },
 
     hideLoader: () => {
         const loader = $('#loader');
-        if (loader) loader.style.display = 'none';
+        if (loader) {
+            loader.style.display = 'none';
+            // Restaurar vista según datos o config
+            if (Object.keys(commitsData).length > 0) {
+                switchView('results');
+            } else if (!hasAIConfig) {
+                switchView('welcome');
+            }
+            // Si hasAIConfig es true y no hay commitsData, se queda en blanco (o estado actual)
+            // pero NO vuelve a welcome automáticamente.
+        }
+    },
+
+    updateViews: (hasConfig) => {
+        if (!hasConfig) {
+            switchView('welcome');
+        } else if (Object.keys(commitsData).length > 0) {
+            switchView('results');
+        } else {
+            // Keep current view or default to welcome if nothing is happening
+        }
     },
 
     error: ({ message }) => {
@@ -151,16 +191,24 @@ const handlers = {
         setTimeout(() => {
             const branchInput = $('#branchSuggestion');
             const commitsList = $('#commitsList');
-            if (branchInput) branchInput.value = '';
-            if (commitsList) commitsList.innerHTML = '';
+            const footer = $('#footerActions');
+
+            if (branchInput) { branchInput.value = ''; }
+            if (commitsList) { commitsList.innerHTML = ''; }
+            if (footer) { footer.style.display = 'none'; }
+
             commitsData = {};
+            // Opcional: switchView('welcome') si no hay config, 
+            // pero si hay config simplemente dejamos el panel listo para el siguiente "Ask AI"
+            const results = $('#resultsView');
+            if (results) { results.classList.remove('show'); }
         }, 2000);
     }
 };
 
 function showNotification(message, type = 'info') {
     const errorEl = $('#errorMessage');
-    if (!errorEl) return;
+    if (!errorEl) { return; }
 
     errorEl.textContent = message;
     errorEl.className = `error-message ${type}`;
@@ -171,28 +219,92 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-function showResults() {
+function switchView(view) {
     const welcome = $('#welcomeScreen');
     const results = $('#resultsView');
-    if (welcome) welcome.classList.add('hidden');
-    if (results) results.classList.add('show');
+    const footer = $('#footerActions');
+
+    if (view === 'welcome') {
+        if (welcome) { welcome.classList.remove('hidden'); }
+        if (results) { results.classList.remove('show'); }
+        if (footer) { footer.style.display = 'none'; }
+    } else if (view === 'results') {
+        if (welcome) { welcome.classList.add('hidden'); }
+        if (results) { results.classList.add('show'); }
+        if (footer) { footer.style.display = 'flex'; }
+    }
+}
+
+function showResults() {
+    switchView('results');
+
+    // Asegurar que el botón tenga el texto correcto según la acción actual
+    const confirmBtn = $('#confirmBtn');
+    if (confirmBtn) {
+        confirmBtn.textContent = currentAction === 'commit-local'
+            ? 'Confirmar Local'
+            : 'Confirmar y Publicar';
+    }
 }
 
 function closePatternModal() {
     const modal = $('#patternModal');
-    if (modal) modal.classList.remove('show');
+    if (modal) { modal.classList.remove('show'); }
 }
 
 function updatePatternExample() {
     const input = $('#branchPattern');
     const example = $('#patternExample');
-    if (!input || !example) return;
+    if (!input || !example) { return; }
 
     const pattern = input.value || '{type}/{name}';
     example.textContent = pattern
         .replace('{type}', 'features')
         .replace('{name}', 'nueva-feature')
         .replace('{ticket}', 'JIRA-123');
+}
+
+function slugify(text) {
+    return text.toString().toLowerCase()
+        .replace(/\s+/g, '-')           // Replace spaces with -
+        .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+        .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+        .replace(/^-+/, '')             // Trim - from start of text
+        .replace(/-+$/, '');            // Trim - from end of text
+}
+
+function updateSuggestedBranch() {
+    const branchInput = $('#branchSuggestion');
+    if (!branchInput || Object.keys(commitsData).length === 0) {
+        return;
+    }
+
+    // Tomamos el primer commit como referencia para la rama
+    const firstFile = Object.keys(commitsData)[0];
+    const commit = commitsData[firstFile];
+
+    const typeMapping = {
+        feat: 'features',
+        fix: 'fixes',
+        docs: 'docs',
+        style: 'style',
+        refactor: 'refactor',
+        test: 'tests',
+        chore: 'chore'
+    };
+
+    const folderName = typeMapping[commit.type] || commit.type;
+    const slugName = slugify(commit.message);
+
+    let result = currentPattern
+        .replace('{type}', folderName)
+        .replace('{name}', slugName)
+        .replace('{ticket}', currentTicket);
+
+    // Limpiar barras dobles o ticket vacío
+    result = result.replace(/\/\//g, '/').replace(/\/$/, '');
+
+    branchInput.value = result;
 }
 
 window.addEventListener('message', e => {
@@ -223,9 +335,27 @@ if (settingsBtn && patternModal) {
     });
 }
 const settingsAIBtn = $('#settingsAIBtn');
-if(settingsAIBtn) {
+if (settingsAIBtn) {
     settingsAIBtn.addEventListener('click', () => {
-        $('#welcomeScreen').classList.toggle('hidden');
+        const welcome = $('#welcomeScreen');
+        if (welcome) {
+            if (welcome.classList.contains('hidden')) {
+                // Show config
+                switchView('welcome');
+            } else {
+                // Hide config
+                if (hasAIConfig) {
+                    welcome.classList.add('hidden');
+                    // Show results if we have data
+                    if (Object.keys(commitsData).length > 0) {
+                        showResults();
+                    }
+                } else {
+                    // If no config, we can't hide it unless we have some other view
+                    showNotification('Configura primero la IA', 'info');
+                }
+            }
+        }
     });
 }
 
@@ -274,7 +404,7 @@ if (saveAIConfig) {
         const model = $('#aiModel');
         const apiKey = $('#aiKey');
 
-        if (!provider || !model || !apiKey) return;
+        if (!provider || !model || !apiKey) { return; }
 
         if (!model.value || !apiKey.value) {
             showNotification('Completa modelo y API Key', 'error');
@@ -307,16 +437,22 @@ if (dropdownBtn && dropdownMenu) {
 }
 
 // Dropdown items
-$$('.dropdown-item').forEach(item => {
+$$('.dropdown-option').forEach(item => {
     item.addEventListener('click', () => {
         currentAction = item.dataset.action;
+
+        // Actualizar UI del menú
+        $$('.dropdown-option').forEach(opt => opt.classList.remove('active'));
+        item.classList.add('active');
+
+        // Actualizar botón principal
         const confirmBtn = $('#confirmBtn');
         if (confirmBtn) {
             confirmBtn.textContent = currentAction === 'commit-local'
-                ? '✓ Commit Local'
-                : '✓ Commit y Publicar';
+                ? 'Confirmar Local'
+                : 'Confirmar y Publicar';
         }
-        
+
         if (dropdownMenu) {
             dropdownMenu.classList.remove('show');
         }

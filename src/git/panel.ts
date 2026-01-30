@@ -7,12 +7,15 @@ import { GitController } from '../controllers/git-controller';
 export class NeuroGitPanel implements vscode.WebviewViewProvider {
     static readonly viewType = 'neurogit.panel';
 
+    private view?: vscode.WebviewView;
+
     constructor(
         private readonly context: vscode.ExtensionContext,
         private readonly git: GIT
     ) { }
 
     resolveWebviewView(view: vscode.WebviewView) {
+        this.view = view;
         view.webview.options = {
             enableScripts: true,
             localResourceRoots: [
@@ -28,6 +31,12 @@ export class NeuroGitPanel implements vscode.WebviewViewProvider {
         vscode.window.onDidChangeActiveColorTheme(() => {
             view.webview.html = this.getHtml(view.webview);
         });
+    }
+
+    public updateBadge(count: number) {
+        if (this.view) {
+            this.view.badge = count > 0 ? { value: count, tooltip: `${count} cambios pendientes` } : undefined;
+        }
     }
 
     private getHtml(webview: vscode.Webview): string {

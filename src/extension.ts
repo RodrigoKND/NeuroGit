@@ -17,30 +17,29 @@ export async function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(provider);
 
     // Actualizar badge de cambios
-    updateChangesBadge(git);
+    updateChangesBadge(git, panel);
 
     // Escuchar cambios en el repositorio
     const repo = git.getCurrentRepository();
     if (repo) {
         repo.state.onDidChange(() => {
-            updateChangesBadge(git);
+            updateChangesBadge(git, panel);
         });
     }
 
     // Escuchar cuando se abre un nuevo repositorio
     git.gitApi.onDidOpenRepository((newRepo: any) => {
         newRepo.state.onDidChange(() => {
-            updateChangesBadge(git);
+            updateChangesBadge(git, panel);
         });
-        updateChangesBadge(git);
+        updateChangesBadge(git, panel);
     });
 }
 
-function updateChangesBadge(git: GIT) {
+function updateChangesBadge(git: GIT, panel: NeuroGitPanel) {
     const repo = git.getCurrentRepository();
     if (!repo) {
-        // Limpiar badge si no hay repo
-        vscode.commands.executeCommand('setContext', 'neurogit.changesCount', 0);
+        panel.updateBadge(0);
         return;
     }
 
@@ -48,8 +47,7 @@ function updateChangesBadge(git: GIT) {
     const indexChanges = repo.state.indexChanges?.length || 0;
     const totalChanges = workingChanges + indexChanges;
 
-    // Actualizar el badge en el sidebar
-    vscode.commands.executeCommand('setContext', 'neurogit.changesCount', totalChanges);
+    panel.updateBadge(totalChanges);
 }
 
-export function deactivate() {}
+export function deactivate() { }

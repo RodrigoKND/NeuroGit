@@ -220,22 +220,29 @@ export class GitController {
       if (action === "commit-publish") {
         try {
           await this.repo.push();
-          vscode.window.showInformationMessage(
-            "✓ Commits realizados y publicados"
-          );
+          const successMsg = "se ha completado exitosamente la publicación del commit";
+          vscode.window.showInformationMessage(`✓ ${successMsg}`);
+          this.view.postMessage({
+            type: "commitSuccess",
+            payload: { message: `✓ ${successMsg}` },
+          });
         } catch (err: any) {
           vscode.window.showWarningMessage(
             `Commits realizados pero no se pudo publicar: ${err.message}`
           );
+          this.view.postMessage({
+            type: "commitSuccess",
+            payload: { message: "✓ Commits realizados localmente (falló el push)" },
+          });
         }
       } else {
-        vscode.window.showInformationMessage("✓ Commits realizados localmente");
+        const successMsg = "se ha completado exitosamente el commit local";
+        vscode.window.showInformationMessage(`✓ ${successMsg}`);
+        this.view.postMessage({
+          type: "commitSuccess",
+          payload: { message: `✓ ${successMsg}` },
+        });
       }
-
-      this.view.postMessage({
-        type: "commitSuccess",
-        payload: { message: "✓ Proceso completado" },
-      });
 
       // Limpiar cache
       this.analysisCache = null;
@@ -396,6 +403,7 @@ IMPORTANTE: Analiza el diff línea por línea para ser preciso en el mensaje de 
         payload: {
           show: true,
           name: branchName,
+          ticket: data.ticket || "",
         },
       });
 

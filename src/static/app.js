@@ -4,6 +4,9 @@ const $$ = node => document.querySelectorAll(node);
 
 let currentAction = 'commit-local';
 let commitsData = {};
+let hasAIConfig = false;
+let currentPattern = '{type}/{name}';
+let currentTicket = '';
 
 const handlers = {
     currentBranchName: ({ branchName, main }) => {
@@ -17,10 +20,11 @@ const handlers = {
         if (warn) { warn.style.display = main ? 'flex' : 'none'; }
     },
 
-    branchCreationSuggestion: ({ show, name }) => {
+    branchCreationSuggestion: ({ show, name, ticket }) => {
         const input = $('#branchSuggestion');
         if (input && show) {
             input.value = name;
+            currentTicket = ticket || '';
             showResults();
         }
     },
@@ -81,6 +85,7 @@ const handlers = {
             select.addEventListener('change', (e) => {
                 const file = e.target.dataset.file;
                 commitsData[file].type = e.target.value;
+                updateSuggestedBranch();
             });
         });
 
@@ -88,6 +93,7 @@ const handlers = {
             input.addEventListener('input', (e) => {
                 const file = e.target.dataset.file;
                 commitsData[file].message = e.target.value;
+                updateSuggestedBranch();
             });
         });
 
@@ -103,25 +109,32 @@ const handlers = {
         if (model) { model.value = config.model || ''; }
         if (apiKey) { apiKey.value = config.apiKey || ''; }
 
-        // Si ya tiene config, mostrar resultados si hay cache
-        if (config.apiKey && config.model) {
+        hasAIConfig = !!(config.apiKey && config.model);
+
+        if (hasAIConfig) {
             const welcome = $('#welcomeScreen');
-            if (welcome && !welcome.classList.contains('hidden')) {
-                // No ocultar aún, esperar a que haya datos
+            if (welcome) { welcome.classList.add('hidden'); }
+
+            if (Object.keys(commitsData).length > 0) {
+                showResults();
             }
         }
     },
 
     loadBranchPattern: (pattern) => {
         const input = $('#branchPattern');
+        currentPattern = pattern || '{type}/{name}';
         if (input) {
-            input.value = pattern || '{type}/{name}';
+            input.value = currentPattern;
             updatePatternExample();
         }
+        updateSuggestedBranch();
     },
 
     configSaved: ({ message }) => {
         showNotification(message, 'success');
+        hasAIConfig = true;
+        // Solo ocultar welcome, no saltar a resultados aún si no hay datos
         const welcome = $('#welcomeScreen');
         if (welcome) { welcome.classList.add('hidden'); }
     },
@@ -147,12 +160,14 @@ const handlers = {
         const loader = $('#loader');
         if (loader) {
             loader.style.display = 'none';
-            // Restaurar vista según datos
+            // Restaurar vista según datos o config
             if (Object.keys(commitsData).length > 0) {
                 switchView('results');
-            } else {
+            } else if (!hasAIConfig) {
                 switchView('welcome');
             }
+            // Si hasAIConfig es true y no hay commitsData, se queda en blanco (o estado actual)
+            // pero NO vuelve a welcome automáticamente.
         }
     },
 
@@ -176,9 +191,17 @@ const handlers = {
         setTimeout(() => {
             const branchInput = $('#branchSuggestion');
             const commitsList = $('#commitsList');
+            const footer = $('#footerActions');
+
             if (branchInput) { branchInput.value = ''; }
             if (commitsList) { commitsList.innerHTML = ''; }
+            if (footer) { footer.style.display = 'none'; }
+
             commitsData = {};
+            // Opcional: switchView('welcome') si no hay config, 
+            // pero si hay config simplemente dejamos el panel listo para el siguiente "Ask AI"
+            const results = $('#resultsView');
+            if (results) { results.classList.remove('show'); }
         }, 2000);
     }
 };
@@ -214,6 +237,14 @@ function switchView(view) {
 
 function showResults() {
     switchView('results');
+
+    // Asegurar que el botón tenga el texto correcto según la acción actual
+    const confirmBtn = $('#confirmBtn');
+    if (confirmBtn) {
+        confirmBtn.textContent = currentAction === 'commit-local'
+            ? 'Confirmar Local'
+            : 'Confirmar y Publicar';
+    }
 }
 
 function closePatternModal() {
@@ -231,6 +262,49 @@ function updatePatternExample() {
         .replace('{type}', 'features')
         .replace('{name}', 'nueva-feature')
         .replace('{ticket}', 'JIRA-123');
+}
+
+function slugify(text) {
+    return text.toString().toLowerCase()
+        .replace(/\s+/g, '-')           // Replace spaces with -
+        .replace(/[^\w\-]+/g, '')       // Remove all non-word chars
+        .replace(/\-\-+/g, '-')         // Replace multiple - with single -
+        .replace(/^-+/, '')             // Trim - from start of text
+        .replace(/-+$/, '');            // Trim - from end of text
+}
+
+function updateSuggestedBranch() {
+    const branchInput = $('#branchSuggestion');
+    if (!branchInput || Object.keys(commitsData).length === 0) {
+        return;
+    }
+
+    // Tomamos el primer commit como referencia para la rama
+    const firstFile = Object.keys(commitsData)[0];
+    const commit = commitsData[firstFile];
+
+    const typeMapping = {
+        feat: 'features',
+        fix: 'fixes',
+        docs: 'docs',
+        style: 'style',
+        refactor: 'refactor',
+        test: 'tests',
+        chore: 'chore'
+    };
+
+    const folderName = typeMapping[commit.type] || commit.type;
+    const slugName = slugify(commit.message);
+
+    let result = currentPattern
+        .replace('{type}', folderName)
+        .replace('{name}', slugName)
+        .replace('{ticket}', currentTicket);
+
+    // Limpiar barras dobles o ticket vacío
+    result = result.replace(/\/\//g, '/').replace(/\/$/, '');
+
+    branchInput.value = result;
 }
 
 window.addEventListener('message', e => {
@@ -264,14 +338,22 @@ const settingsAIBtn = $('#settingsAIBtn');
 if (settingsAIBtn) {
     settingsAIBtn.addEventListener('click', () => {
         const welcome = $('#welcomeScreen');
-        if (welcome && welcome.classList.contains('hidden')) {
-            switchView('welcome');
-        } else {
-            // Revert back to results if we have data
-            if (Object.keys(commitsData).length > 0) {
-                switchView('results');
-            } else {
+        if (welcome) {
+            if (welcome.classList.contains('hidden')) {
+                // Show config
                 switchView('welcome');
+            } else {
+                // Hide config
+                if (hasAIConfig) {
+                    welcome.classList.add('hidden');
+                    // Show results if we have data
+                    if (Object.keys(commitsData).length > 0) {
+                        showResults();
+                    }
+                } else {
+                    // If no config, we can't hide it unless we have some other view
+                    showNotification('Configura primero la IA', 'info');
+                }
             }
         }
     });

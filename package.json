@@ -12,26 +12,13 @@
     },
     "categories": [
         "AI",
-        "git",
-        "github",
+        "SCM Providers",
         "Programming Languages",
-        "assistant",
-        "files",
-        "versions",
-        "control",
         "Testing",
-        "workflow",
-        "productivity",
-        "utilities",
-        "other",
-        "branch",
-        "suggestions",
-        "automation",
-        "vscode"
+        "Other"
     ],
     "main": "./dist/extension.js",
     "activationEvents": [
-        "onView:neurogit.panel",
         "onStartupFinished"
     ],
     "contributes": {
@@ -40,8 +27,7 @@
                 {
                     "id": "neurogit",
                     "title": "NeuroGit",
-                    "icon": "media/neurogit-dark.png",
-                    "badge": "$(git-commit) $(neurogit.changesCount)"
+                    "icon": "media/neurogit-dark.png"
                 }
             ]
         },
@@ -51,8 +37,7 @@
                     "id": "neurogit.panel",
                     "name": "Changes",
                     "type": "webview",
-                    "icon": "media/neurogit-dark.png",
-                    "when": "neurogit.changesCount >= 0"
+                    "icon": "media/neurogit-dark.png"
                 }
             ]
         },

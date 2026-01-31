@@ -16,7 +16,7 @@ export class GitController {
   constructor(
     private readonly view: vscode.Webview,
     private readonly git: GIT,
-    private readonly context: vscode.ExtensionContext
+    private readonly context: vscode.ExtensionContext,
   ) {
     this.ai = new AIService(this.context);
     this.repo = this.git.getCurrentRepository();
@@ -62,7 +62,7 @@ export class GitController {
   private async loadCache() {
     this.analysisCache = this.context.workspaceState.get(
       "neurogit.lastAnalysis",
-      null
+      null,
     );
   }
 
@@ -70,7 +70,7 @@ export class GitController {
     if (this.analysisCache) {
       await this.context.workspaceState.update(
         "neurogit.lastAnalysis",
-        this.analysisCache
+        this.analysisCache,
       );
     }
   }
@@ -78,14 +78,14 @@ export class GitController {
   private async loadBranchPattern() {
     this.branchPattern = this.context.workspaceState.get(
       "neurogit.branchPattern",
-      "{type}/{name}"
+      "{type}/{name}",
     );
   }
 
   private async saveBranchPattern() {
     await this.context.workspaceState.update(
       "neurogit.branchPattern",
-      this.branchPattern
+      this.branchPattern,
     );
   }
 
@@ -136,7 +136,7 @@ export class GitController {
     try {
       await this.ai.saveConfig(cfg);
       vscode.window.showInformationMessage(
-        "✓ Configuración de IA guardada correctamente"
+        "✓ Configuración de IA guardada correctamente",
       );
       this.view.postMessage({
         type: "configSaved",
@@ -170,14 +170,14 @@ export class GitController {
     try {
       const { action, branch, commits } = payload;
 
-      // Crear rama si es necesario
+      // Crear y cambiar a la rama si estamos en main
       const currentBranch = this.git.getCurrentBranchName();
       if (this.git.isOnMain(currentBranch)) {
         try {
           await this.repo.createBranch(branch, true);
           await this.repo.checkout(branch);
           vscode.window.showInformationMessage(
-            `✓ Rama ${branch} creada y cambiada`
+            `✓ Rama ${branch} creada y cambiada`,
           );
         } catch (err: any) {
           vscode.window.showErrorMessage(`Error al crear rama: ${err.message}`);
@@ -185,13 +185,12 @@ export class GitController {
         }
       }
 
-      // Hacer commits por archivo
+      // Commits por archivo
       for (const file in commits) {
         try {
           const { type, message } = commits[file];
           const commitMessage = `${type}: ${message}`;
 
-          // Buscar el archivo en los cambios
           const allChanges = [
             ...(this.repo.state.workingTreeChanges || []),
             ...(this.repo.state.indexChanges || []),
@@ -203,46 +202,58 @@ export class GitController {
           });
 
           if (!fileChange) {
-            console.warn(`Archivo ${file} no encontrado en cambios`);
             continue;
           }
 
-          // Stage el archivo
           await this.repo.add([fileChange.uri.fsPath]);
-          // Commit
           await this.repo.commit(commitMessage);
         } catch (err: any) {
           vscode.window.showErrorMessage(`Error en ${file}: ${err.message}`);
         }
       }
 
-      // Publicar si se seleccionó esa opción
-      if (action === "commit-publish") {
-        try {
-          await this.repo.push();
-          const successMsg = "se ha completado exitosamente la publicación del commit";
-          vscode.window.showInformationMessage(`✓ ${successMsg}`);
-          this.view.postMessage({
-            type: "commitSuccess",
-            payload: { message: `✓ ${successMsg}` },
-          });
-        } catch (err: any) {
-          vscode.window.showWarningMessage(
-            `Commits realizados pero no se pudo publicar: ${err.message}`
-          );
-          this.view.postMessage({
-            type: "commitSuccess",
-            payload: { message: "✓ Commits realizados localmente (falló el push)" },
-          });
-        }
-      } else {
-        const successMsg = "se ha completado exitosamente el commit local";
+      // Commit local solamente
+      if (action !== "commit-publish") {
+        const successMsg = "Se completó exitosamente el commit local";
         vscode.window.showInformationMessage(`✓ ${successMsg}`);
         this.view.postMessage({
           type: "commitSuccess",
           payload: { message: `✓ ${successMsg}` },
         });
+        return;
       }
+
+      // Evitar push si no hay commits nuevos
+      const ahead = this.repo.state.HEAD?.ahead ?? 0;
+      if (ahead === 0) {
+        vscode.window.showWarningMessage("No hay commits nuevos para publicar");
+        return;
+      }
+
+      // Detectar si la rama existe en remoto
+      const current = this.git.getCurrentBranchName();
+
+      const remoteBranches = this.repo.state.refs
+        ?.map((ref: { name?: string }) => ref.name)
+        .filter((name: string) => !!name && name.startsWith("origin/"));
+
+      const existsInRemote = remoteBranches?.some(
+        (remoteName: string) => remoteName === `origin/${current}`,
+      );
+
+      // Push correcto
+      if (existsInRemote) {
+        await this.repo.push();
+      } else {
+        await this.repo.push(undefined, true);
+      }
+
+      const successMsg = "Commits publicados correctamente en remoto";
+      vscode.window.showInformationMessage(`✓ ${successMsg}`);
+      this.view.postMessage({
+        type: "commitSuccess",
+        payload: { message: `✓ ${successMsg}` },
+      });
 
       // Limpiar cache
       this.analysisCache = null;
@@ -264,7 +275,9 @@ export class GitController {
   }
 
   private bindRepo() {
-    if (!this.repo) { return; }
+    if (!this.repo) {
+      return;
+    }
 
     this.repo.state.onDidChange(() => {
       this.sendCurrentBranchName();
@@ -327,47 +340,56 @@ export class GitController {
               diff: "No se pudo obtener diff",
             };
           }
-        })
+        }),
       );
 
       const prompt = `Analiza estos cambios de Git y devuelve SOLO un JSON válido:
-
 ${filesWithDiff
-          .map(
-            (f) => `
-Archivo: ${f.path}
-Estado: ${f.status}
-Cambios:
-${f.diff}
----`
-          )
-          .join("\n")}
+  .map((f) => `Archivo: ${f.path} Estado: ${f.status} Cambios:${f.diff}---`)
+  .join("\n")}
 
-IMPORTANTE: El usuario usa este patrón para nombrar ramas: "${this.branchPattern
-        }"
+PATRÓN DE RAMA DEL USUARIO: "${this.branchPattern}"
 
-Variables disponibles:
-- {type} = Carpeta por tipo (features, fixes, docs, etc.) - sé muy específico y breve.
-- {name} = Nombre descriptivo de la rama según a los cambios que se realizaron, sé muy especifico y breve, no repitas el tipo del commit en la rama por ejemplo: refactor/refactor, no debe existir doble tipo solo uno: refactor/nombre-rama, esto es solo un ejemplo
-- {ticket} = Número de ticket (ej: JIRA-123, si el usuario menciona un ticket en sus cambios)
+🚨 REGLAS ESTRICTAS PARA GENERAR LA RAMA:
 
-Analiza el diff real de cada archivo y crea mensajes de commit MUY específicos que describan exactamente qué se agregó, modificó o eliminó.
+1. El campo "type" debe ser UNO de estos valores: feat, fix, docs, style, test, refactor, perf, build, ci, chore, revert
 
-Responde SOLO con este formato JSON (sin texto adicional):
+2. El campo "name" debe ser:
+   - Un nombre descriptivo CORTO en kebab-case
+   - SIN incluir el tipo de commit
+   - SIN palabras como "feat", "fix", "chore", "refactor", etc.
+   - SOLO el nombre puro de la funcionalidad o cambio
+   
+   ✅ CORRECTO: "remove-profile-page", "add-user-validation", "update-navbar-styles"
+   ❌ INCORRECTO: "chore-remove-profile-page", "fix-bug-login", "refactor-code"
+
+3. El campo "ticket" debe ser:
+   - El número de ticket si se detecta en los cambios (ej: "JIRA-123")
+   - Una cadena vacía "" si NO hay ticket
+
+4. La rama final se construye como: {type}/{name} o {type}/{name}-{ticket}
+   
+   Ejemplos correctos:
+   - { "type": "chore", "name": "remove-profile-page", "ticket": "" } → chore/remove-profile-page
+   - { "type": "feat", "name": "user-authentication", "ticket": "JIRA-456" } → feat/user-authentication-JIRA-456
+   - { "type": "fix", "name": "login-validation", "ticket": "" } → fix/login-validation
+
+Responde SOLO con este JSON (sin markdown, sin explicaciones):
 {
-  "branch": "nombre-descriptivo-de-rama-ticket (si detectas un número de ticket en los cambios, sino déjalo vacío "")",
-  "ticket": "TICKET-123" (solo si detectas un número de ticket en los cambios, sino déjalo vacío ""),
+  "type": "tipo-de-commit",
+  "name": "nombre-descriptivo-sin-tipo",
+  "ticket": "ticket-o-vacio",
   "commits": {
-    "archivo.js": {
-      "message": "descripción MUY específica del cambio real (ej: 'remove unused imports', 'add validation for email field', 'fix null pointer in user service')",
-      "type": "tipo-de-commit que ves conveniente según los cambios, solo usa los tipos válidos como valores"
+    "ruta/archivo.js": {
+      "message": "descripción específica del cambio",
+      "type": "tipo-de-commit"
     }
   }
 }
 
-Tipos válidos: "feat", "fix", "docs", "style", "test", "refactor", "perf", "build", "ci", "chore", "revert"
-NOTA: NO incluyas el tipo (feat, fix, etc) en el nombre de la rama, solo un nombre descriptivo. Todo el contenido en inglés.
-IMPORTANTE: Analiza el diff línea por línea para ser preciso en el mensaje de commit.`;
+Tipos válidos: feat, fix, docs, style, test, refactor, perf, build, ci, chore, revert
+
+TODO en inglés. Analiza el diff y sé específico.`;
 
       const resultText = await this.ai.run(prompt);
 
@@ -387,7 +409,7 @@ IMPORTANTE: Analiza el diff línea por línea para ser preciso en el mensaje de 
       const branchName = this.applyBranchPattern(
         data.branch,
         data.commits,
-        data.ticket || ""
+        data.ticket || "",
       );
 
       // Guardar en cache
@@ -424,7 +446,7 @@ IMPORTANTE: Analiza el diff línea por línea para ser preciso en el mensaje de 
   private applyBranchPattern(
     suggestedName: string,
     commits: any,
-    ticket: string = ""
+    ticket: string = "",
   ): string {
     // Si el patrón no tiene variables, devolver el nombre sugerido directo
     if (!this.branchPattern.includes("{")) {

@@ -23,7 +23,7 @@ const handlers = {
     branchCreationSuggestion: ({ show, name, ticket }) => {
         const input = $('#branchSuggestion');
         if (input && show) {
-            input.value = name;
+            input.value = name.replace(/(\b[^/]+)\/\1/g, "$1");
             currentTicket = ticket || '';
             showResults();
         }
@@ -34,7 +34,7 @@ const handlers = {
         const container = $('#commitsList');
         if (!container) { return; }
 
-        container.innerHTML = '';
+        container.textContent = '';
 
         if (Object.keys(commits).length === 0) {
             container.innerHTML = '<div class="empty-state">No hay cambios sugeridos para confirmar</div>';
@@ -194,7 +194,7 @@ const handlers = {
             const footer = $('#footerActions');
 
             if (branchInput) { branchInput.value = ''; }
-            if (commitsList) { commitsList.innerHTML = ''; }
+            if (commitsList) { commitsList.textContent = ''; }
             if (footer) { footer.style.display = 'none'; }
 
             commitsData = {};

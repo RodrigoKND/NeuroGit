@@ -1,178 +1,220 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NeuroGit</title>
+    <link rel="stylesheet" href="{{pathCSS}}" />
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NeuroGit</title>
-  <link rel="stylesheet" href="{{pathCSS}}" />
-</head>
-
-<body>
-  <div class="app-container">
-    <!-- HEADER -->
-    <header class="header">
-      <div class="header-left">
-        <div class="branch-badge-container" id="currentBranchContainer">
-          <span class="branch-icon">
-            <svg viewBox="0 0 16 16" fill="currentColor">
-              <path
-                d="M10 13c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm-4-3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-3.5 1c0-1.2.8-2.2 1.9-2.4C4.6 6.3 6.1 4 8 4c1.6 0 2.9 1 3.6 2.4l1.3-.7C11.9 4 10.1 2.5 8 2.5 5.7 2.5 3.7 3.8 2.6 5.8 1.4 6 0 7.4 0 8.5c0 1.4 1.1 2.5 2.5 2.5s2.5-1.1 2.5-2.5c0-.6-.2-1.1-.5-1.5z" />
-            </svg>
-          </span>
-          <span class="branch-name" id="currentBranch">Cargando...</span>
+  <body>
+    <div class="app-container">
+      <!-- HEADER -->
+      <header class="header">
+        <div class="header-left">
+          <div class="branch-badge-container" id="currentBranchContainer">
+            <span class="branch-icon">
+              <svg viewBox="0 0 16 16" fill="currentColor">
+                <path
+                  d="M10 13c0-1.1.9-2 2-2s2 .9 2 2-.9 2-2 2-2-.9-2-2zm-4-3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-3.5 1c0-1.2.8-2.2 1.9-2.4C4.6 6.3 6.1 4 8 4c1.6 0 2.9 1 3.6 2.4l1.3-.7C11.9 4 10.1 2.5 8 2.5 5.7 2.5 3.7 3.8 2.6 5.8 1.4 6 0 7.4 0 8.5c0 1.4 1.1 2.5 2.5 2.5s2.5-1.1 2.5-2.5c0-.6-.2-1.1-.5-1.5z"
+                />
+              </svg>
+            </span>
+            <span class="branch-name" id="currentBranch">Cargando...</span>
+          </div>
         </div>
-      </div>
-      <div class="header-right">
-        <button class="icon-button" id="magicBtn" title="Analizar con IA">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path
-              d="M8 1a1 1 0 0 1 1 1v1.5a1 1 0 0 1-2 0V2a1 1 0 0 1 1-1zM4.5 4a1 1 0 0 1 0 1.4l-1 1A1 1 0 0 1 2 5l1-1A1 1 0 0 1 4.5 4zm8.5 1.4a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1-1.4 1.4l-1-1a1 1 0 0 1 0-1.4zM8 12a1 1 0 0 1 1 1v1.5a1 1 0 0 1-2 0V13a1 1 0 0 1 1-1zM4.5 10.6a1 1 0 0 1 0 1.4l-1 1a1 1 0 0 1-1.4-1.4l1-1a1 1 0 0 1 1.4 0zm8.5 0a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1-1.4 1.4l-1-1a1 1 0 0 1 0-1.4zM8 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" />
-          </svg>
-        </button>
-        <button class="icon-button" id="settingsBtn" title="Configuración de Rama">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path
-              d="M9.1 13.4l.7 1.3-1.6.9-.7-1.3c-.5.1-1 .1-1.5 0l-.7 1.3-1.6-.9.7-1.3c-.5-.4-.9-.8-1.3-1.3l-1.3.7-.9-1.6 1.3-.7c-.1-.5-.1-1 0-1.5L.8 6.9l.9-1.6 1.3.7c.4-.5.8-.9 1.3-1.3l-.7-1.3 1.6-.9.7 1.3c.5-.1 1-.1 1.5 0l.7-1.3 1.6.9-.7 1.3c.5.4.9.8 1.3 1.3l1.3-.7.9 1.6-1.3.7c.1.5.1 1 0 1.5l1.3.7-.9 1.6-1.3-.7c-.4.5-.8.9-1.3 1.3zM6 9.5c1.9 0 3.5-1.6 3.5-3.5S7.9 2.5 6 2.5 2.5 4.1 2.5 6 4.1 9.5 6 9.5z" />
-          </svg>
-        </button>
-        <button class="icon-button" id="settingsAIBtn" title="Configuración de IA">
-          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
-            <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M12 18.5A2.493 2.493 0 0 1 7.51 20H7.5a2.468 2.468 0 0 1-2.4-3.154 2.98 2.98 0 0 1-.85-5.274 2.468 2.468 0 0 1 .92-3.182 2.477 2.477 0 0 1 1.876-3.344 2.5 2.5 0 0 1 3.41-1.856A2.5 2.5 0 0 1 12 5.5m0 13v-13m0 13a2.493 2.493 0 0 0 4.49 1.5h.01a2.468 2.468 0 0 0 2.403-3.154 2.98 2.98 0 0 0 .847-5.274 2.468 2.468 0 0 0-.921-3.182 2.477 2.477 0 0 0-1.875-3.344A2.5 2.5 0 0 0 14.5 3 2.5 2.5 0 0 0 12 5.5m-8 5a2.5 2.5 0 0 1 3.48-2.3m-.28 8.551a3 3 0 0 1-2.953-5.185M20 10.5a2.5 2.5 0 0 0-3.481-2.3m.28 8.551a3 3 0 0 0 2.954-5.185" />
-          </svg>
-        </button>
-      </div>
-    </header>
+        <div class="header-right">
+          <button
+            class="icon-button"
+            id="settingsBtn"
+            title="Configuración de Rama"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path
+                d="M9.1 13.4l.7 1.3-1.6.9-.7-1.3c-.5.1-1 .1-1.5 0l-.7 1.3-1.6-.9.7-1.3c-.5-.4-.9-.8-1.3-1.3l-1.3.7-.9-1.6 1.3-.7c-.1-.5-.1-1 0-1.5L.8 6.9l.9-1.6 1.3.7c.4-.5.8-.9 1.3-1.3l-.7-1.3 1.6-.9.7 1.3c.5-.1 1-.1 1.5 0l.7-1.3 1.6.9-.7 1.3c.5.4.9.8 1.3 1.3l1.3-.7.9 1.6-1.3.7c.1.5.1 1 0 1.5l1.3.7-.9 1.6-1.3-.7c-.4.5-.8.9-1.3 1.3zM6 9.5c1.9 0 3.5-1.6 3.5-3.5S7.9 2.5 6 2.5 2.5 4.1 2.5 6 4.1 9.5 6 9.5z"
+              />
+            </svg>
+          </button>
+          <button
+            class="icon-button"
+            id="settingsAIBtn"
+            title="Configuración de IA"
+          >
+            <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+              <path
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 18.5A2.493 2.493 0 0 1 7.51 20H7.5a2.468 2.468 0 0 1-2.4-3.154 2.98 2.98 0 0 1-.85-5.274 2.468 2.468 0 0 1 .92-3.182 2.477 2.477 0 0 1 1.876-3.344 2.5 2.5 0 0 1 3.41-1.856A2.5 2.5 0 0 1 12 5.5m0 13v-13m0 13a2.493 2.493 0 0 0 4.49 1.5h.01a2.468 2.468 0 0 0 2.403-3.154 2.98 2.98 0 0 0 .847-5.274 2.468 2.468 0 0 0-.921-3.182 2.477 2.477 0 0 0-1.875-3.344A2.5 2.5 0 0 0 14.5 3 2.5 2.5 0 0 0 12 5.5m-8 5a2.5 2.5 0 0 1 3.48-2.3m-.28 8.551a3 3 0 0 1-2.953-5.185M20 10.5a2.5 2.5 0 0 0-3.481-2.3m.28 8.551a3 3 0 0 0 2.954-5.185"
+              />
+            </svg>
+          </button>
+          <button class="icon-button" id="magicBtn" title="Analizar con IA">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+              <path
+                d="M8 1a1 1 0 0 1 1 1v1.5a1 1 0 0 1-2 0V2a1 1 0 0 1 1-1zM4.5 4a1 1 0 0 1 0 1.4l-1 1A1 1 0 0 1 2 5l1-1A1 1 0 0 1 4.5 4zm8.5 1.4a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1-1.4 1.4l-1-1a1 1 0 0 1 0-1.4zM8 12a1 1 0 0 1 1 1v1.5a1 1 0 0 1-2 0V13a1 1 0 0 1 1-1zM4.5 10.6a1 1 0 0 1 0 1.4l-1 1a1 1 0 0 1-1.4-1.4l1-1a1 1 0 0 1 1.4 0zm8.5 0a1 1 0 0 1 1.4 0l1 1a1 1 0 0 1-1.4 1.4l-1-1a1 1 0 0 1 0-1.4zM8 5a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"
+              />
+            </svg>
+          </button>
+        </div>
+      </header>
 
-    <!-- NOTIFICATION POPUPS -->
+      <!-- NOTIFICATION POPUPS -->
 
-    <div class="warning-banner" id="warningText" style="display: none">
-      <span class="warning-icon">⚠️</span>
-      <span class="warning-message">Estás en main. Se creará una rama, cuando realices un commit.</span>
+      <div class="warning-banner" id="warningText" style="display: none">
+        <span class="warning-icon">⚠️</span>
+        <span class="warning-message"
+          >Estás en main. Se creará una rama, cuando realices un commit.</span
+        >
+      </div>
+
+      <div
+        id="errorMessage"
+        class="notification-banner"
+        style="display: none"
+      ></div>
+
+      <!-- MAIN CONTENT -->
+      <main class="content-area">
+        <!-- LOADER -->
+        <div id="loader" class="loader-container" style="display: none">
+          <div class="loader-content">
+            <img src="{{logoUri}}" alt="NeuroGit" class="loader-logo" />
+            <div class="spinner"></div>
+          </div>
+          <span class="loader-text">Analizando...</span>
+        </div>
+
+        <!-- WELCOME / ZERO STATE -->
+        <div class="welcome-container" id="welcomeScreen">
+          <div class="welcome-logo-container">
+            <img src="{{logoUri}}" alt="NeuroGit" class="welcome-logo" />
+          </div>
+          <h2 class="welcome-title">NeuroGit</h2>
+          <div class="config-card">
+            <div class="form-group">
+              <label>Proveedor</label>
+              <select id="aiProvider" class="select-input">
+                <option value="gemini">Google Gemini</option>
+                <option value="huggingface">HuggingFace</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Modelo</label>
+              <input
+                id="aiModel"
+                class="text-input"
+                placeholder="Ej: gemini-pro"
+              />
+            </div>
+            <div class="form-group">
+              <label>API Key</label>
+              <input
+                id="aiKey"
+                class="text-input"
+                type="password"
+                placeholder="••••••••"
+              />
+            </div>
+            <button class="btn btn-primary btn-block" id="saveAIConfig">
+              Guardar Configuración
+            </button>
+          </div>
+        </div>
+
+        <!-- RESULTS -->
+        <div class="results-container" id="resultsView">
+          <!-- BRANCH SECTION -->
+          <div class="section-group">
+            <div class="section-header">
+              <span class="section-label">RAMA SUGERIDA</span>
+            </div>
+            <div class="input-wrapper">
+              <input
+                type="text"
+                class="text-input branch-input"
+                id="branchSuggestion"
+                placeholder="Nombre de la rama..."
+              />
+            </div>
+          </div>
+
+          <!-- COMMITS SECTION -->
+          <div class="section-group">
+            <div class="section-header">
+              <span class="section-label">COMMITS SUGERIDOS</span>
+            </div>
+            <div id="commitsList" class="commits-list">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- FOOTER ACTIONS -->
+      <footer class="footer-actions" id="footerActions" style="display: none">
+        <button class="btn btn-secondary" id="cancelBtn">Cancelar</button>
+        <div class="split-button">
+          <button class="btn btn-primary" id="confirmBtn">Confirmar</button>
+          <button class="btn btn-primary icon-only" id="dropdownBtn">
+            <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
+              <path d="M1 1l4 4 4-4" />
+            </svg>
+          </button>
+          <div class="dropdown-popover" id="dropdownMenu">
+            <div class="dropdown-option active" data-action="commit-local">
+              <div class="option-content">
+                <span class="option-title">Commit Local</span>
+                <span class="option-desc">Solo guardar en local</span>
+              </div>
+              <span class="check-mark">✓</span>
+            </div>
+            <div class="dropdown-option" data-action="commit-publish">
+              <div class="option-content">
+                <span class="option-title">Commit y Publicar</span>
+                <span class="option-desc">Push al remoto</span>
+              </div>
+              <span class="check-mark">✓</span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
 
-    <div id="errorMessage" class="notification-banner" style="display: none"></div>
-
-    <!-- MAIN CONTENT -->
-    <main class="content-area">
-      <!-- LOADER -->
-      <div id="loader" class="loader-container" style="display: none">
-        <div class="loader-content">
-          <img src="{{logoUri}}" alt="NeuroGit" class="loader-logo" />
-          <div class="spinner"></div>
+    <!-- MODAL PATTERNS -->
+    <div class="modal-backdrop" id="patternModal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>Patrones de Rama</h3>
+          <button class="close-btn" id="closePatternModal">×</button>
         </div>
-        <span class="loader-text">Analizando...</span>
-      </div>
-
-      <!-- WELCOME / ZERO STATE -->
-      <div class="welcome-container" id="welcomeScreen">
-        <div class="welcome-logo-container">
-          <img src="{{logoUri}}" alt="NeuroGit" class="welcome-logo" />
-        </div>
-        <h2 class="welcome-title">NeuroGit</h2>
-        <div class="config-card">
-          <div class="form-group">
-            <label>Proveedor</label>
-            <select id="aiProvider" class="select-input">
-              <option value="gemini">Google Gemini</option>
-              <option value="huggingface">HuggingFace</option>
-            </select>
+        <div class="modal-body">
+          <p class="modal-info">
+            Variables: <code>{type}</code>, <code>{name}</code>,
+            <code>{ticket}</code>
+          </p>
+          <input
+            type="text"
+            id="branchPattern"
+            class="text-input"
+            placeholder="{type}/{name}"
+          />
+          <div class="preview-box">
+            <span>Vista previa:</span>
+            <code id="patternExample"></code>
           </div>
-          <div class="form-group">
-            <label>Modelo</label>
-            <input id="aiModel" class="text-input" placeholder="Ej: gemini-pro" />
-          </div>
-          <div class="form-group">
-            <label>API Key</label>
-            <input id="aiKey" class="text-input" type="password" placeholder="••••••••" />
-          </div>
-          <button class="btn btn-primary btn-block" id="saveAIConfig">
-            Guardar Configuración
+          <button
+            class="btn btn-primary btn-block"
+            id="savePatternBtn"
+            style="margin-top: 16px"
+          >
+            Guardar
           </button>
         </div>
       </div>
-
-      <!-- RESULTS -->
-      <div class="results-container" id="resultsView">
-        <!-- BRANCH SECTION -->
-        <div class="section-group">
-          <div class="section-header">
-            <span class="section-label">RAMA SUGERIDA</span>
-          </div>
-          <div class="input-wrapper">
-            <input type="text" class="text-input branch-input" id="branchSuggestion"
-              placeholder="Nombre de la rama..." />
-          </div>
-        </div>
-
-        <!-- COMMITS SECTION -->
-        <div class="section-group">
-          <div class="section-header">
-            <span class="section-label">COMMITS SUGERIDOS</span>
-          </div>
-          <div id="commitsList" class="commits-list">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- FOOTER ACTIONS -->
-    <footer class="footer-actions" id="footerActions" style="display: none">
-      <button class="btn btn-secondary" id="cancelBtn">Cancelar</button>
-      <div class="split-button">
-        <button class="btn btn-primary" id="confirmBtn">Confirmar</button>
-        <button class="btn btn-primary icon-only" id="dropdownBtn">
-          <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
-            <path d="M1 1l4 4 4-4" />
-          </svg>
-        </button>
-        <div class="dropdown-popover" id="dropdownMenu">
-          <div class="dropdown-option active" data-action="commit-local">
-            <div class="option-content">
-              <span class="option-title">Commit Local</span>
-              <span class="option-desc">Solo guardar en local</span>
-            </div>
-            <span class="check-mark">✓</span>
-          </div>
-          <div class="dropdown-option" data-action="commit-publish">
-            <div class="option-content">
-              <span class="option-title">Commit y Publicar</span>
-              <span class="option-desc">Push al remoto</span>
-            </div>
-            <span class="check-mark">✓</span>
-          </div>
-        </div>
-      </div>
-    </footer>
-  </div>
-
-  <!-- MODAL PATTERNS -->
-  <div class="modal-backdrop" id="patternModal">
-    <div class="modal-dialog">
-      <div class="modal-header">
-        <h3>Patrones de Rama</h3>
-        <button class="close-btn" id="closePatternModal">×</button>
-      </div>
-      <div class="modal-body">
-        <p class="modal-info">
-          Variables: <code>{type}</code>, <code>{name}</code>,
-          <code>{ticket}</code>
-        </p>
-        <input type="text" id="branchPattern" class="text-input" placeholder="{type}/{name}" />
-        <div class="preview-box">
-          <span>Vista previa:</span>
-          <code id="patternExample"></code>
-        </div>
-        <button class="btn btn-primary btn-block" id="savePatternBtn" style="margin-top: 16px">
-          Guardar
-        </button>
-      </div>
     </div>
-  </div>
 
-  <script nonce="{{nonce}}" src="{{pathJS}}"></script>
-</body>
-
+    <script nonce="{{nonce}}" src="{{pathJS}}"></script>
+  </body>
 </html>

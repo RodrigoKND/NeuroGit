@@ -318,7 +318,6 @@ var GitController = class {
             return relativePath === file;
           });
           if (!fileChange) {
-            console.warn(`Archivo ${file} no encontrado en cambios`);
             continue;
           }
           await this.repo.add([fileChange.uri.fsPath]);
@@ -327,32 +326,36 @@ var GitController = class {
           vscode.window.showErrorMessage(`Error en ${file}: ${err.message}`);
         }
       }
-      if (action === "commit-publish") {
-        try {
-          await this.repo.push();
-          const successMsg = "se ha completado exitosamente la publicaci\xF3n del commit";
-          vscode.window.showInformationMessage(`\u2713 ${successMsg}`);
-          this.view.postMessage({
-            type: "commitSuccess",
-            payload: { message: `\u2713 ${successMsg}` }
-          });
-        } catch (err) {
-          vscode.window.showWarningMessage(
-            `Commits realizados pero no se pudo publicar: ${err.message}`
-          );
-          this.view.postMessage({
-            type: "commitSuccess",
-            payload: { message: "\u2713 Commits realizados localmente (fall\xF3 el push)" }
-          });
-        }
-      } else {
-        const successMsg = "se ha completado exitosamente el commit local";
-        vscode.window.showInformationMessage(`\u2713 ${successMsg}`);
+      if (action !== "commit-publish") {
+        const successMsg2 = "Se complet\xF3 exitosamente el commit local";
+        vscode.window.showInformationMessage(`\u2713 ${successMsg2}`);
         this.view.postMessage({
           type: "commitSuccess",
-          payload: { message: `\u2713 ${successMsg}` }
+          payload: { message: `\u2713 ${successMsg2}` }
         });
+        return;
       }
+      const ahead = this.repo.state.HEAD?.ahead ?? 0;
+      if (ahead === 0) {
+        vscode.window.showWarningMessage("No hay commits nuevos para publicar");
+        return;
+      }
+      const current = this.git.getCurrentBranchName();
+      const remoteBranches = this.repo.state.refs?.map((ref) => ref.name).filter((name) => !!name && name.startsWith("origin/"));
+      const existsInRemote = remoteBranches?.some(
+        (remoteName) => remoteName === `origin/${current}`
+      );
+      if (existsInRemote) {
+        await this.repo.push();
+      } else {
+        await this.repo.push(void 0, true);
+      }
+      const successMsg = "Commits publicados correctamente en remoto";
+      vscode.window.showInformationMessage(`\u2713 ${successMsg}`);
+      this.view.postMessage({
+        type: "commitSuccess",
+        payload: { message: `\u2713 ${successMsg}` }
+      });
       this.analysisCache = null;
       await this.saveCache();
     } catch (err) {
@@ -428,40 +431,50 @@ var GitController = class {
         })
       );
       const prompt = `Analiza estos cambios de Git y devuelve SOLO un JSON v\xE1lido:
+${filesWithDiff.map((f) => `Archivo: ${f.path} Estado: ${f.status} Cambios:${f.diff}---`).join("\n")}
 
-${filesWithDiff.map(
-        (f) => `
-Archivo: ${f.path}
-Estado: ${f.status}
-Cambios:
-${f.diff}
----`
-      ).join("\n")}
+PATR\xD3N DE RAMA DEL USUARIO: "${this.branchPattern}"
 
-IMPORTANTE: El usuario usa este patr\xF3n para nombrar ramas: "${this.branchPattern}"
+\u{1F6A8} REGLAS ESTRICTAS PARA GENERAR LA RAMA:
 
-Variables disponibles:
-- {type} = Carpeta por tipo (features, fixes, docs, etc.) - s\xE9 muy espec\xEDfico y breve.
-- {name} = Nombre descriptivo de la rama seg\xFAn a los cambios que se realizaron, s\xE9 muy especifico y breve, no repitas el tipo del commit en la rama por ejemplo: refactor/refactor, no debe existir doble tipo solo uno: refactor/nombre-rama, esto es solo un ejemplo
-- {ticket} = N\xFAmero de ticket (ej: JIRA-123, si el usuario menciona un ticket en sus cambios)
+1. El campo "type" debe ser UNO de estos valores: feat, fix, docs, style, test, refactor, perf, build, ci, chore, revert
 
-Analiza el diff real de cada archivo y crea mensajes de commit MUY espec\xEDficos que describan exactamente qu\xE9 se agreg\xF3, modific\xF3 o elimin\xF3.
+2. El campo "name" debe ser:
+   - Un nombre descriptivo CORTO en kebab-case
+   - SIN incluir el tipo de commit
+   - SIN palabras como "feat", "fix", "chore", "refactor", etc.
+   - SOLO el nombre puro de la funcionalidad o cambio
+   
+   \u2705 CORRECTO: "remove-profile-page", "add-user-validation", "update-navbar-styles"
+   \u274C INCORRECTO: "chore-remove-profile-page", "fix-bug-login", "refactor-code"
 
-Responde SOLO con este formato JSON (sin texto adicional):
+3. El campo "ticket" debe ser:
+   - El n\xFAmero de ticket si se detecta en los cambios (ej: "JIRA-123")
+   - Una cadena vac\xEDa "" si NO hay ticket
+
+4. La rama final se construye como: {type}/{name} o {type}/{name}-{ticket}
+   
+   Ejemplos correctos:
+   - { "type": "chore", "name": "remove-profile-page", "ticket": "" } \u2192 chore/remove-profile-page
+   - { "type": "feat", "name": "user-authentication", "ticket": "JIRA-456" } \u2192 feat/user-authentication-JIRA-456
+   - { "type": "fix", "name": "login-validation", "ticket": "" } \u2192 fix/login-validation
+
+Responde SOLO con este JSON (sin markdown, sin explicaciones):
 {
-  "branch": "nombre-descriptivo-de-rama-ticket (si detectas un n\xFAmero de ticket en los cambios, sino d\xE9jalo vac\xEDo "")",
-  "ticket": "TICKET-123" (solo si detectas un n\xFAmero de ticket en los cambios, sino d\xE9jalo vac\xEDo ""),
+  "type": "tipo-de-commit",
+  "name": "nombre-descriptivo-sin-tipo",
+  "ticket": "ticket-o-vacio",
   "commits": {
-    "archivo.js": {
-      "message": "descripci\xF3n MUY espec\xEDfica del cambio real (ej: 'remove unused imports', 'add validation for email field', 'fix null pointer in user service')",
-      "type": "tipo-de-commit que ves conveniente seg\xFAn los cambios, solo usa los tipos v\xE1lidos como valores"
+    "ruta/archivo.js": {
+      "message": "descripci\xF3n espec\xEDfica del cambio",
+      "type": "tipo-de-commit"
     }
   }
 }
 
-Tipos v\xE1lidos: "feat", "fix", "docs", "style", "test", "refactor", "perf", "build", "ci", "chore", "revert"
-NOTA: NO incluyas el tipo (feat, fix, etc) en el nombre de la rama, solo un nombre descriptivo. Todo el contenido en ingl\xE9s.
-IMPORTANTE: Analiza el diff l\xEDnea por l\xEDnea para ser preciso en el mensaje de commit.`;
+Tipos v\xE1lidos: feat, fix, docs, style, test, refactor, perf, build, ci, chore, revert
+
+TODO en ingl\xE9s. Analiza el diff y s\xE9 espec\xEDfico.`;
       const resultText = await this.ai.run(prompt);
       let jsonText = resultText.trim();
       const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
@@ -550,7 +563,12 @@ var NeuroGitPanel = class {
   }
   updateBadge(count) {
     if (this.view) {
-      this.view.badge = count > 0 ? { value: count, tooltip: `${count} cambios pendientes` } : void 0;
+      const unitMinimumChange = 1;
+      const messageTooltip = count === unitMinimumChange ? "cambio pendiente" : "cambios pendientes";
+      this.view.badge = count > 0 ? {
+        value: count,
+        tooltip: messageTooltip
+      } : void 0;
     }
   }
   getHtml(webview) {
@@ -617,6 +635,8 @@ var GIT = class {
 };
 
 // src/extension.ts
+var refreshTimeout;
+var pollInterval;
 async function activate(context) {
   const git = new GIT();
   await git.init();
@@ -626,21 +646,75 @@ async function activate(context) {
     panel
   );
   context.subscriptions.push(provider);
-  updateChangesBadge(git, panel);
+  await updateChangesBadge(git, panel);
   const repo = git.getCurrentRepository();
   if (repo) {
     repo.state.onDidChange(() => {
       updateChangesBadge(git, panel);
     });
   }
-  git.gitApi.onDidOpenRepository((newRepo) => {
-    newRepo.state.onDidChange(() => {
-      updateChangesBadge(git, panel);
-    });
-    updateChangesBadge(git, panel);
+  pollInterval = setInterval(async () => {
+    if (vscode4.window.state.focused) {
+      await forceGitUpdate(git, panel);
+    }
+  }, 500);
+  context.subscriptions.push(
+    vscode4.workspace.onDidChangeTextDocument((event) => {
+      if (event.document.uri.scheme === "file") {
+        scheduleGitRefresh(git, panel);
+      }
+    })
+  );
+  context.subscriptions.push(
+    vscode4.workspace.onDidSaveTextDocument(() => {
+      scheduleGitRefresh(git, panel);
+    })
+  );
+  context.subscriptions.push(
+    vscode4.window.onDidChangeWindowState((state) => {
+      if (state.focused) {
+        forceGitUpdate(git, panel);
+      }
+    })
+  );
+  context.subscriptions.push(
+    vscode4.window.onDidChangeActiveTextEditor(() => {
+      scheduleGitRefresh(git, panel);
+    })
+  );
+  context.subscriptions.push({
+    dispose: () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+    }
   });
 }
-function updateChangesBadge(git, panel) {
+async function forceGitUpdate(git, panel) {
+  const repo = git.getCurrentRepository();
+  if (!repo) {
+    panel.updateBadge(0);
+    return;
+  }
+  try {
+    await repo.status();
+    await updateChangesBadge(git, panel);
+  } catch (error) {
+    console.error("Error updating git status:", error);
+  }
+}
+function scheduleGitRefresh(git, panel) {
+  if (refreshTimeout) {
+    clearTimeout(refreshTimeout);
+  }
+  refreshTimeout = setTimeout(async () => {
+    await forceGitUpdate(git, panel);
+  }, 200);
+}
+async function updateChangesBadge(git, panel) {
   const repo = git.getCurrentRepository();
   if (!repo) {
     panel.updateBadge(0);
@@ -649,9 +723,16 @@ function updateChangesBadge(git, panel) {
   const workingChanges = repo.state.workingTreeChanges?.length || 0;
   const indexChanges = repo.state.indexChanges?.length || 0;
   const totalChanges = workingChanges + indexChanges;
+  console.log(`[NeuroGit] Working: ${workingChanges}, Index: ${indexChanges}, Total: ${totalChanges}`);
   panel.updateBadge(totalChanges);
 }
 function deactivate() {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+  }
+  if (refreshTimeout) {
+    clearTimeout(refreshTimeout);
+  }
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

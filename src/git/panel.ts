@@ -35,7 +35,12 @@ export class NeuroGitPanel implements vscode.WebviewViewProvider {
 
     public updateBadge(count: number) {
         if (this.view) {
-            this.view.badge = count > 0 ? { value: count, tooltip: `${count} cambios pendientes` } : undefined;
+            const unitMinimumChange = 1;
+            const messageTooltip = count === unitMinimumChange ? "cambio pendiente" : "cambios pendientes";
+            this.view.badge = count > 0 ? { 
+                value: count, 
+                tooltip: messageTooltip } 
+                : undefined;
         }
     }
 

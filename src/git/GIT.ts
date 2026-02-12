@@ -34,4 +34,4 @@ export class GIT {
     isOnMain(branch: string): boolean {
         return ['main', 'master'].includes(branch.toLowerCase());
     }
-}
+}// Cambio pequeño para prueba de IA

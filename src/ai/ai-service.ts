@@ -125,4 +125,4 @@ export class AIService {
             throw new Error(`Gemini: ${err.message}`);
         }
     }
-}
+}// Cambio grande 1

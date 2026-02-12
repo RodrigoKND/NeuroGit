@@ -231,7 +231,20 @@ var GitController = class {
     }, 500);
   }
   sendCachedAnalysis() {
-    if (this.analysisCache) {
+    if (this.analysisCache && this.repo) {
+      const currentChanges = [
+        ...this.repo.state.workingTreeChanges || [],
+        ...this.repo.state.indexChanges || []
+      ];
+      const cachedFiles = Object.keys(this.analysisCache.commits);
+      const stillHaveChanges = cachedFiles.some(
+        (file) => currentChanges.some((c) => vscode.workspace.asRelativePath(c.uri) === file)
+      );
+      if (!stillHaveChanges) {
+        this.analysisCache = null;
+        this.saveCache();
+        return;
+      }
       this.view.postMessage({
         type: "branchCreationSuggestion",
         payload: {
@@ -326,6 +339,8 @@ var GitController = class {
           vscode.window.showErrorMessage(`Error en ${file}: ${err.message}`);
         }
       }
+      this.analysisCache = null;
+      await this.saveCache();
       if (action !== "commit-publish") {
         const successMsg2 = "Se complet\xF3 exitosamente el commit local";
         vscode.window.showInformationMessage(`\u2713 ${successMsg2}`);

@@ -101,7 +101,24 @@ export class GitController {
   }
 
   private sendCachedAnalysis() {
-    if (this.analysisCache) {
+    if (this.analysisCache && this.repo) {
+      // Validar que los archivos de la caché todavía tengan cambios pendientes
+      const currentChanges = [
+        ...(this.repo.state.workingTreeChanges || []),
+        ...(this.repo.state.indexChanges || []),
+      ];
+
+      const cachedFiles = Object.keys(this.analysisCache.commits);
+      const stillHaveChanges = cachedFiles.some(file =>
+        currentChanges.some((c: any) => vscode.workspace.asRelativePath(c.uri) === file)
+      );
+
+      if (!stillHaveChanges) {
+        this.analysisCache = null;
+        this.saveCache();
+        return;
+      }
+
       this.view.postMessage({
         type: "branchCreationSuggestion",
         payload: {
@@ -211,6 +228,10 @@ export class GitController {
           vscode.window.showErrorMessage(`Error en ${file}: ${err.message}`);
         }
       }
+
+      // Limpiar cache después de cualquier commit exitoso (local o publicado)
+      this.analysisCache = null;
+      await this.saveCache();
 
       // Commit local solamente
       if (action !== "commit-publish") {
@@ -345,8 +366,8 @@ export class GitController {
 
       const prompt = `Analiza estos cambios de Git y devuelve SOLO un JSON válido:
 ${filesWithDiff
-  .map((f) => `Archivo: ${f.path} Estado: ${f.status} Cambios:${f.diff}---`)
-  .join("\n")}
+          .map((f) => `Archivo: ${f.path} Estado: ${f.status} Cambios:${f.diff}---`)
+          .join("\n")}
 
 PATRÓN DE RAMA DEL USUARIO: "${this.branchPattern}"
 
@@ -481,3 +502,4 @@ TODO en inglés. Analiza el diff y sé específico.`;
     return result;
   }
 }
+// Cambio grande 2

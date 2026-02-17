@@ -561,6 +561,7 @@ var NeuroGitPanel = class {
   }
   static viewType = "neurogit.panel";
   view;
+  gitController;
   resolveWebviewView(view) {
     this.view = view;
     view.webview.options = {
@@ -571,19 +572,27 @@ var NeuroGitPanel = class {
       ]
     };
     view.webview.html = this.getHtml(view.webview);
-    new GitController(view.webview, this.git, this.context);
+    this.gitController = new GitController(
+      view.webview,
+      this.git,
+      this.context
+    );
     vscode2.window.onDidChangeActiveColorTheme(() => {
-      view.webview.html = this.getHtml(view.webview);
+      if (this.view) {
+        this.view.webview.html = this.getHtml(this.view.webview);
+      }
     });
   }
-  updateBadge(count) {
-    if (this.view) {
-      const unitMinimumChange = 1;
-      const messageTooltip = count === unitMinimumChange ? "cambio pendiente" : "cambios pendientes";
-      this.view.badge = count > 0 ? {
-        value: count,
-        tooltip: messageTooltip
-      } : void 0;
+  // Método simplificado - solo actualiza el HTML, no el badge
+  async updateChanges() {
+    if (!this.view) return;
+    const repo = this.git.getCurrentRepository();
+    if (!repo) {
+      this.view.webview.postMessage({
+        type: "updateChanges",
+        changes: 0
+      });
+      return;
     }
   }
   getHtml(webview) {
@@ -650,103 +659,106 @@ var GIT = class {
 };
 
 // src/extension.ts
-var refreshTimeout;
-var pollInterval;
+var statusBarItem;
+var notificationState = {
+  lastModifiedFiles: /* @__PURE__ */ new Set(),
+  lastNotificationTime: 0,
+  COOLDOWN_MS: 5e3
+};
 async function activate(context) {
   const git = new GIT();
   await git.init();
   const panel = new NeuroGitPanel(context, git);
   const provider = vscode4.window.registerWebviewViewProvider(
     NeuroGitPanel.viewType,
-    panel
+    panel,
+    { webviewOptions: { retainContextWhenHidden: true } }
   );
   context.subscriptions.push(provider);
-  await updateChangesBadge(git, panel);
+  statusBarItem = vscode4.window.createStatusBarItem(
+    vscode4.StatusBarAlignment.Left,
+    100
+  );
+  statusBarItem.name = "Neuro Git";
+  statusBarItem.command = "neuro-git.openView";
+  context.subscriptions.push(statusBarItem);
+  context.subscriptions.push(
+    vscode4.commands.registerCommand("neuro-git.openView", () => {
+      vscode4.commands.executeCommand("neuro-git.view.focus");
+    })
+  );
+  async function updateStatusBar() {
+    const repo2 = git.getCurrentRepository();
+    if (!repo2) {
+      statusBarItem.hide();
+      return;
+    }
+    try {
+      await repo2.status();
+      const workingChanges = repo2.state.workingTreeChanges?.length || 0;
+      const indexChanges = repo2.state.indexChanges?.length || 0;
+      const totalChanges = workingChanges + indexChanges;
+      if (totalChanges > 0) {
+        statusBarItem.text = `$(git-branch) ${totalChanges} cambio${totalChanges > 1 ? "s" : ""}`;
+        statusBarItem.tooltip = `${totalChanges} cambio${totalChanges > 1 ? "s" : ""} pendiente${totalChanges > 1 ? "s" : ""}`;
+        statusBarItem.show();
+      } else {
+        statusBarItem.hide();
+      }
+      panel.updateChanges();
+    } catch (error) {
+      console.error("[NeuroGit] Error:", error);
+      statusBarItem.hide();
+    }
+  }
+  function maybeNotify(fileName, totalChanges) {
+    const now = Date.now();
+    const timeSinceLastNotification = now - notificationState.lastNotificationTime;
+    const isNewFile = !notificationState.lastModifiedFiles.has(fileName);
+    const cooldownExpired = timeSinceLastNotification > notificationState.COOLDOWN_MS;
+    if (isNewFile && cooldownExpired) {
+      vscode4.window.showInformationMessage(
+        `[NeuroGit] ${totalChanges} archivo${totalChanges > 1 ? "s" : ""} modificado${totalChanges > 1 ? "s" : ""}`
+      );
+      notificationState.lastNotificationTime = now;
+    }
+    notificationState.lastModifiedFiles.add(fileName);
+    setTimeout(() => {
+      notificationState.lastModifiedFiles.delete(fileName);
+    }, 3e4);
+  }
+  await updateStatusBar();
   const repo = git.getCurrentRepository();
   if (repo) {
     repo.state.onDidChange(() => {
-      updateChangesBadge(git, panel);
+      updateStatusBar();
     });
   }
-  pollInterval = setInterval(async () => {
-    if (vscode4.window.state.focused) {
-      await forceGitUpdate(git, panel);
-    }
-  }, 500);
+  let updateTimeout;
+  function scheduleUpdate() {
+    if (updateTimeout) clearTimeout(updateTimeout);
+    updateTimeout = setTimeout(updateStatusBar, 300);
+  }
   context.subscriptions.push(
-    vscode4.workspace.onDidChangeTextDocument((event) => {
+    vscode4.workspace.onDidChangeTextDocument(async (event) => {
       if (event.document.uri.scheme === "file") {
-        scheduleGitRefresh(git, panel);
+        if (event.document.isDirty) {
+          await event.document.save();
+        }
+        scheduleUpdate();
+        const fileName = event.document.fileName;
+        const repo2 = git.getCurrentRepository();
+        if (repo2) {
+          const totalChanges = (repo2.state.workingTreeChanges?.length || 0) + (repo2.state.indexChanges?.length || 0);
+          maybeNotify(fileName, totalChanges);
+        }
       }
     })
   );
-  context.subscriptions.push(
-    vscode4.workspace.onDidSaveTextDocument(() => {
-      scheduleGitRefresh(git, panel);
-    })
-  );
-  context.subscriptions.push(
-    vscode4.window.onDidChangeWindowState((state) => {
-      if (state.focused) {
-        forceGitUpdate(git, panel);
-      }
-    })
-  );
-  context.subscriptions.push(
-    vscode4.window.onDidChangeActiveTextEditor(() => {
-      scheduleGitRefresh(git, panel);
-    })
-  );
-  context.subscriptions.push({
-    dispose: () => {
-      if (pollInterval) {
-        clearInterval(pollInterval);
-      }
-      if (refreshTimeout) {
-        clearTimeout(refreshTimeout);
-      }
-    }
-  });
-}
-async function forceGitUpdate(git, panel) {
-  const repo = git.getCurrentRepository();
-  if (!repo) {
-    panel.updateBadge(0);
-    return;
-  }
-  try {
-    await repo.status();
-    await updateChangesBadge(git, panel);
-  } catch (error) {
-    console.error("Error updating git status:", error);
-  }
-}
-function scheduleGitRefresh(git, panel) {
-  if (refreshTimeout) {
-    clearTimeout(refreshTimeout);
-  }
-  refreshTimeout = setTimeout(async () => {
-    await forceGitUpdate(git, panel);
-  }, 200);
-}
-async function updateChangesBadge(git, panel) {
-  const repo = git.getCurrentRepository();
-  if (!repo) {
-    panel.updateBadge(0);
-    return;
-  }
-  const workingChanges = repo.state.workingTreeChanges?.length || 0;
-  const indexChanges = repo.state.indexChanges?.length || 0;
-  const totalChanges = workingChanges + indexChanges;
-  console.log(`[NeuroGit] Working: ${workingChanges}, Index: ${indexChanges}, Total: ${totalChanges}`);
-  panel.updateBadge(totalChanges);
 }
 function deactivate() {
-  if (pollInterval) {
-    clearInterval(pollInterval);
-  }
-  if (refreshTimeout) {
-    clearTimeout(refreshTimeout);
+  if (statusBarItem) {
+    statusBarItem.dispose();
   }
 }
 // Annotate the CommonJS export names for ESM import in node:

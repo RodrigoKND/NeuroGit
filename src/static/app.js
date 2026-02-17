@@ -311,7 +311,7 @@ window.addEventListener('message', e => {
     const { type, payload } = e.data;
     if (handlers[type]) {
         handlers[type](payload);
-    }
+    } 
 });
 
 window.addEventListener('load', () => {
